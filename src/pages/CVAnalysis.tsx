@@ -9,6 +9,8 @@ import { motion } from 'framer-motion';
 import { Loader2, CheckCircle, Award, AlertTriangle, FileText, Sparkles } from 'lucide-react';
 import { analyzeCV } from '@/lib/gemini';
 import { useNavigate } from 'react-router-dom';
+import { Slider } from '@/components/ui/slider';
+import { Label } from '@/components/ui/label';
 
 const CVAnalysis = () => {
   const navigate = useNavigate();
@@ -18,11 +20,17 @@ const CVAnalysis = () => {
     jobTitle: string;
     skills: string[];
     questions: string[];
+    yearsExperience?: number;
   } | null>(null);
+  const [yearsExperience, setYearsExperience] = useState<number>(2);
 
   const handleFileChange = (selectedFile: File) => {
     setFile(selectedFile);
     setAnalysis(null);
+  };
+
+  const handleExperienceChange = (value: number[]) => {
+    setYearsExperience(value[0]);
   };
 
   const analyzeResume = async () => {
@@ -41,10 +49,10 @@ const CVAnalysis = () => {
       // Read the file content
       const fileText = await readFileAsText(file);
       
-      console.log("Analyzing CV content...");
+      console.log("Analyzing CV content with experience:", yearsExperience);
       
-      // Call Gemini API to analyze the CV - pass 10 for number of questions
-      const cvAnalysis = await analyzeCV(fileText, 10);
+      // Call Gemini API to analyze the CV with experience level
+      const cvAnalysis = await analyzeCV(fileText, yearsExperience);
       
       console.log("Received analysis from Gemini API:", cvAnalysis);
       
@@ -52,7 +60,10 @@ const CVAnalysis = () => {
       setAnalysis(cvAnalysis);
       
       // Store the analysis data in sessionStorage for use in Interview.tsx
-      sessionStorage.setItem('cv-analysis', JSON.stringify(cvAnalysis));
+      sessionStorage.setItem('cv-analysis', JSON.stringify({
+        ...cvAnalysis,
+        yearsExperience: yearsExperience
+      }));
       
       toast({
         title: "CV Analysis Complete",
@@ -122,6 +133,28 @@ const CVAnalysis = () => {
                 onFileChange={handleFileChange} 
                 className="mb-6"
               />
+              
+              <div className="space-y-4 mb-6">
+                <div>
+                  <Label htmlFor="experience" className="text-base">
+                    Years of Experience: {yearsExperience}
+                  </Label>
+                  <div className="flex items-center mt-2">
+                    <span className="text-sm text-muted-foreground">0</span>
+                    <Slider
+                      id="experience"
+                      min={0}
+                      max={20}
+                      step={1}
+                      defaultValue={[yearsExperience]}
+                      onValueChange={handleExperienceChange}
+                      className="mx-4 flex-1"
+                    />
+                    <span className="text-sm text-muted-foreground">20+</span>
+                  </div>
+                </div>
+              </div>
+              
               <Button 
                 onClick={analyzeResume} 
                 disabled={!file || isAnalyzing}

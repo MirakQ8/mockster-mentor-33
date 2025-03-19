@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -308,7 +309,23 @@ const Interview = () => {
         description: "Our AI is evaluating your interview performance...",
       });
       
-      const feedback = await analyzeFeedback(questions, finalAnswers);
+      // Get job title and experience from CV analysis if available
+      let jobTitle = "Software Developer";
+      let yearsExperience = 1;
+      
+      const savedAnalysis = sessionStorage.getItem('cv-analysis');
+      if (savedAnalysis) {
+        try {
+          const analysis = JSON.parse(savedAnalysis);
+          jobTitle = analysis.jobTitle || jobTitle;
+          yearsExperience = analysis.yearsExperience || yearsExperience;
+        } catch (e) {
+          console.error("Error parsing CV analysis:", e);
+        }
+      }
+      
+      // Pass job title and experience to get more accurate feedback
+      const feedback = await analyzeFeedback(questions, finalAnswers, jobTitle, yearsExperience);
       
       if (interviewId) {
         const storedData = sessionStorage.getItem('current-interview');
