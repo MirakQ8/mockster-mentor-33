@@ -190,6 +190,17 @@ const Index = () => {
                   AI-powered interview preparation tool
                 </p>
               </div>
+              
+              <div className="mb-6 md:mb-0">
+                <a 
+                  href="https://x.com/KarimQ45" 
+                  target="_blank" 
+                  rel="noreferrer" 
+                  className="text-sm flex items-center hover:text-primary transition-colors"
+                >
+                  🔹 X Account: @KarimQ45
+                </a>
+              </div>
             </div>
             
             <div className="text-center text-sm text-muted-foreground mt-8">
