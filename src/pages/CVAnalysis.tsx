@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -48,20 +47,16 @@ const CVAnalysis = () => {
     setIsAnalyzing(true);
     
     try {
-      // Read the file content
       const fileText = await readFileAsText(file);
       
       console.log("Analyzing CV content with experience:", yearsExperience);
       
-      // Call Gemini API to analyze the CV with experience level
       const cvAnalysis = await analyzeCV(fileText, yearsExperience);
       
       console.log("Received analysis from Gemini API:", cvAnalysis);
       
-      // Set the analysis state with the data from Gemini
       setAnalysis(cvAnalysis);
       
-      // Store the analysis data in sessionStorage for use in Interview.tsx
       sessionStorage.setItem('cv-analysis', JSON.stringify({
         ...cvAnalysis,
         yearsExperience: yearsExperience
@@ -280,7 +275,7 @@ const CVAnalysis = () => {
           </div>
           
           <footer className="mt-16 text-center text-muted-foreground text-sm">
-            <p>© 2025 Mockster. All rights reserved.</p>
+            <p>© 2025 Karman. All rights reserved.</p>
           </footer>
         </div>
       </GradientBackground>

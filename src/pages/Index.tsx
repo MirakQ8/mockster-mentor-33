@@ -200,7 +200,7 @@ const Index = () => {
               </div>
               
               <div className="text-center text-sm text-muted-foreground mt-8">
-                © 2025 Mockster. All rights reserved.
+                © 2025 Karman. All rights reserved.
               </div>
             </div>
           </footer>
