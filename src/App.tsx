@@ -16,6 +16,7 @@ import SignIn from "./pages/SignIn";
 import SignUp from "./pages/SignUp";
 import AuthWrapper from "./components/auth/AuthWrapper";
 import CVAnalysis from "./pages/CVAnalysis";
+import History from "./pages/History";
 
 // Clerk publishable key
 const CLERK_PUBLISHABLE_KEY = "pk_test_c291bmQtc3R1cmdlb24tMzIuY2xlcmsuYWNjb3VudHMuZGV2JA";
@@ -58,6 +59,11 @@ const App = () => (
               <Route path="/analysis" element={
                 <AuthWrapper>
                   <CVAnalysis />
+                </AuthWrapper>
+              } />
+              <Route path="/history" element={
+                <AuthWrapper>
+                  <History />
                 </AuthWrapper>
               } />
               <Route path="*" element={<NotFound />} />

@@ -5,7 +5,7 @@ import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
 import { useUser, UserButton } from '@clerk/clerk-react';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { Menu, Home, FileUp, Video, MessageSquare, FileText } from 'lucide-react';
+import { Menu, Home, FileUp, Video, MessageSquare, FileText, History } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -25,6 +25,7 @@ const Navbar: React.FC = () => {
     { path: '/interview', label: 'Interview', icon: <Video className="h-4 w-4 mr-1" /> },
     { path: '/feedback', label: 'Feedback', icon: <MessageSquare className="h-4 w-4 mr-1" /> },
     { path: '/analysis', label: 'CV Analysis', icon: <FileText className="h-4 w-4 mr-1" /> },
+    { path: '/history', label: 'History', icon: <History className="h-4 w-4 mr-1" /> },
   ];
 
   return (
