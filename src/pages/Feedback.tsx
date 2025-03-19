@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -8,6 +9,7 @@ import PageTransition from '@/components/PageTransition';
 import { motion } from 'framer-motion';
 import { toast } from '@/components/ui/use-toast';
 import { Badge } from '@/components/ui/badge';
+import jsPDF from 'jspdf';
 
 type FeedbackType = {
   overallScore: number;
@@ -84,52 +86,138 @@ const Feedback = () => {
     if (!feedback) return;
     
     try {
-      let reportContent = `# Interview Feedback Report\n\n`;
-      reportContent += `## Overall Score: ${feedback.overallScore}/100\n\n`;
-      reportContent += `## Overall Feedback\n${feedback.feedback}\n\n`;
+      // Create a new PDF document
+      const doc = new jsPDF();
+      const pageWidth = doc.internal.pageSize.getWidth();
+      let yPos = 20;
+      const leftMargin = 20;
+      const lineHeight = 7;
+      const maxLineWidth = pageWidth - (2 * leftMargin);
       
-      reportContent += `## Strengths\n`;
+      // Add title
+      doc.setFontSize(22);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Interview Feedback Report', pageWidth / 2, yPos, { align: 'center' });
+      yPos += 15;
+      
+      // Add date
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+      const date = new Date().toLocaleDateString();
+      doc.text(`Generated on: ${date}`, pageWidth / 2, yPos, { align: 'center' });
+      yPos += 15;
+      
+      // Overall Score
+      doc.setFontSize(16);
+      doc.setFont('helvetica', 'bold');
+      doc.text(`Overall Score: ${feedback.overallScore}/100`, leftMargin, yPos);
+      yPos += 10;
+      
+      // Overall Feedback
+      doc.setFontSize(16);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Overall Feedback', leftMargin, yPos);
+      yPos += 7;
+      
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'normal');
+      
+      // Split text to handle wrapping
+      const feedbackLines = doc.splitTextToSize(feedback.feedback, maxLineWidth);
+      doc.text(feedbackLines, leftMargin, yPos);
+      yPos += (feedbackLines.length * lineHeight) + 10;
+      
+      // Strengths
+      doc.setFontSize(16);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Strengths', leftMargin, yPos);
+      yPos += 7;
+      
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'normal');
       feedback.strengths.forEach((strength, i) => {
-        reportContent += `${i+1}. ${strength}\n`;
+        doc.text(`• ${strength}`, leftMargin, yPos);
+        yPos += lineHeight;
       });
-      reportContent += '\n';
+      yPos += 7;
       
-      reportContent += `## Areas to Improve\n`;
+      // Areas to Improve
+      doc.setFontSize(16);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Areas to Improve', leftMargin, yPos);
+      yPos += 7;
+      
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'normal');
       feedback.areasToImprove.forEach((area, i) => {
-        reportContent += `${i+1}. ${area}\n`;
+        doc.text(`• ${area}`, leftMargin, yPos);
+        yPos += lineHeight;
       });
-      reportContent += '\n';
+      yPos += 10;
       
-      reportContent += `## Question-by-Question Feedback\n\n`;
+      // Question-by-Question Feedback
+      doc.setFontSize(16);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Question-by-Question Feedback', leftMargin, yPos);
+      yPos += 10;
+      
+      // Add each question's feedback
       feedback.questionFeedback.forEach((qf, i) => {
-        reportContent += `### Question ${i+1}: ${qf.question}\n`;
-        reportContent += `Score: ${qf.score}/100\n`;
-        reportContent += `Difficulty: ${qf.difficulty || 'Not specified'}\n`;
-        reportContent += `Feedback: ${qf.feedback}\n`;
+        // Check if we need to add a new page
+        if (yPos > doc.internal.pageSize.getHeight() - 40) {
+          doc.addPage();
+          yPos = 20;
+        }
         
+        doc.setFontSize(14);
+        doc.setFont('helvetica', 'bold');
+        doc.text(`Question ${i+1}${qf.difficulty ? ` (${qf.difficulty})` : ''}`, leftMargin, yPos);
+        yPos += 7;
+        
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'normal');
+        
+        const questionLines = doc.splitTextToSize(qf.question, maxLineWidth);
+        doc.text(questionLines, leftMargin, yPos);
+        yPos += (questionLines.length * lineHeight) + 5;
+        
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'bold');
+        doc.text(`Score: ${qf.score}/100`, leftMargin, yPos);
+        yPos += 7;
+        
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'normal');
+        const feedbackLines = doc.splitTextToSize(qf.feedback, maxLineWidth);
+        doc.text(feedbackLines, leftMargin, yPos);
+        yPos += (feedbackLines.length * lineHeight) + 5;
+        
+        // Add key points if available
         if (qf.keyPoints && qf.keyPoints.length > 0) {
-          reportContent += `Key Points:\n`;
-          qf.keyPoints.forEach((point, j) => {
-            reportContent += `- ${point}\n`;
+          doc.setFontSize(12);
+          doc.setFont('helvetica', 'bold');
+          doc.text('Key Points:', leftMargin, yPos);
+          yPos += 7;
+          
+          doc.setFontSize(12);
+          doc.setFont('helvetica', 'normal');
+          qf.keyPoints.forEach(point => {
+            const pointLines = doc.splitTextToSize(`• ${point}`, maxLineWidth - 5);
+            doc.text(pointLines, leftMargin, yPos);
+            yPos += (pointLines.length * lineHeight);
           });
         }
-        reportContent += '\n';
+        
+        yPos += 10;
       });
       
-      const blob = new Blob([reportContent], { type: 'text/plain' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      const date = new Date().toISOString().split('T')[0];
-      a.href = url;
-      a.download = `interview-feedback-${date}.txt`;
-      document.body.appendChild(a);
-      a.click();
-      URL.revokeObjectURL(url);
-      document.body.removeChild(a);
+      // Save the PDF
+      const fileName = `interview-feedback-${new Date().toISOString().split('T')[0]}.pdf`;
+      doc.save(fileName);
       
       toast({
         title: "Report downloaded",
-        description: "Your interview feedback report has been downloaded successfully.",
+        description: "Your interview feedback report has been downloaded as a PDF.",
       });
     } catch (error) {
       console.error("Error downloading report:", error);
