@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -11,7 +10,6 @@ import VirtualInterviewer from '@/components/VirtualInterviewer';
 import SpeechToText from '@/components/SpeechToText';
 import { analyzeFeedback, generateDefaultQuestions } from '@/lib/gemini';
 import { Card } from '@/components/ui/card';
-import { db } from '@/lib/db';
 import { useUser } from '@clerk/clerk-react';
 
 const Interview = () => {
@@ -38,36 +36,37 @@ const Interview = () => {
       setIsLoading(true);
       const savedAnalysis = sessionStorage.getItem('cv-analysis');
       
-      if (savedAnalysis) {
-        try {
+      try {
+        let jobTitle = "Software Developer";
+        let questions = [];
+        
+        if (savedAnalysis) {
           const analysis = JSON.parse(savedAnalysis);
+          jobTitle = analysis.jobTitle || jobTitle;
+          
           if (analysis.questions && Array.isArray(analysis.questions) && analysis.questions.length > 0) {
-            console.log("Retrieved questions from CV analysis:", analysis.questions);
-            setQuestions(analysis.questions);
+            questions = analysis.questions;
           } else {
-            const jobTitle = analysis.jobTitle || "Software Developer";
-            const generatedQuestions = await generateDefaultQuestions(jobTitle);
-            setQuestions(generatedQuestions);
-            
-            toast({
-              title: "Generated personalized questions",
-              description: `Created questions for ${jobTitle} role based on your CV.`,
-              variant: "default"
-            });
+            questions = await generateDefaultQuestions(jobTitle);
           }
-        } catch (error) {
-          console.error("Error parsing CV analysis from session storage:", error);
-          setDefaultQuestions();
+        } else {
+          questions = await generateDefaultQuestions();
         }
-      } else {
-        await setDefaultQuestions();
+        
+        setQuestions(questions);
+      } catch (error) {
+        console.error("Error fetching questions:", error);
+        const defaultQuestions = await generateDefaultQuestions();
+        setQuestions(defaultQuestions);
+        
         toast({
-          title: "No CV analysis found",
-          description: "Using default interview questions. For personalized questions, please analyze your CV first.",
+          title: "Using default questions",
+          description: "There was an issue loading custom questions.",
           variant: "default"
         });
+      } finally {
+        setIsLoading(false);
       }
-      setIsLoading(false);
     };
     
     fetchQuestions();
@@ -306,7 +305,7 @@ const Interview = () => {
       
       toast({
         title: "Analyzing your responses",
-        description: "Our AI is evaluating your interview performance...",
+        description: "We're evaluating your interview performance...",
       });
       
       // Get job title and experience from CV analysis if available
@@ -324,7 +323,7 @@ const Interview = () => {
         }
       }
       
-      // Pass job title and experience to get more accurate feedback
+      // Generate feedback based on answers
       const feedback = await analyzeFeedback(questions, finalAnswers, jobTitle, yearsExperience);
       
       if (interviewId) {
@@ -345,8 +344,7 @@ const Interview = () => {
           sessionStorage.setItem('interview-feedback', JSON.stringify(feedback));
           sessionStorage.setItem('completed-interview', JSON.stringify(completedInterview));
           
-          console.log("Completed interview:", completedInterview);
-          
+          // Store in interview history
           const historyString = sessionStorage.getItem('interview-history');
           const history = historyString ? JSON.parse(historyString) : [];
           history.push(completedInterview);
