@@ -9,8 +9,9 @@ const SignInPage = () => {
       <div className="min-h-screen pt-24 pb-12 px-4 flex justify-center">
         <SignIn 
           routing="path" 
-          path="/sign-in" 
+          path="/sign-in"
           signUpUrl="/sign-up"
+          redirectUrl="/"
           appearance={{
             elements: {
               rootBox: "mx-auto w-full max-w-md",

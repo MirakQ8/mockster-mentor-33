@@ -3,9 +3,9 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AnimatePresence } from "framer-motion";
-import { ClerkProvider } from "@clerk/clerk-react";
+import { ClerkProvider, SignedIn, SignedOut } from "@clerk/clerk-react";
 import { Navbar } from '@/components';
 import Index from "./pages/Index";
 import Upload from "./pages/Upload";
@@ -28,11 +28,6 @@ const App = () => (
       clerkJSVersion="5.56.0-snapshot.v20250312225817"
       signInUrl="/sign-in"
       signUpUrl="/sign-up"
-      signInFallbackRedirectUrl="/dashboard"
-      signUpFallbackRedirectUrl="/"
-      signInForceRedirectUrl="/dashboard"
-      signUpForceRedirectUrl="/"
-      afterSignOutUrl="/"
     >
       <TooltipProvider>
         <Toaster />
@@ -42,8 +37,8 @@ const App = () => (
           <AnimatePresence mode="wait">
             <Routes>
               <Route path="/" element={<Index />} />
-              <Route path="/sign-in" element={<SignIn />} />
-              <Route path="/sign-up" element={<SignUp />} />
+              <Route path="/sign-in/*" element={<SignIn />} />
+              <Route path="/sign-up/*" element={<SignUp />} />
               <Route path="/upload" element={
                 <AuthWrapper>
                   <Upload />
