@@ -194,20 +194,41 @@ export const analyzeFeedback = async (
         console.log("Parsed feedback from Gemini:", parsedJson);
         
         // Ensure all expected fields exist
+        let formattedQuestionFeedback;
+        
+        // Process question feedback - we need to handle async mapping properly
+        if (Array.isArray(parsedJson.questionFeedback)) {
+          // Process each question feedback item individually
+          formattedQuestionFeedback = await Promise.all(
+            parsedJson.questionFeedback.map(async (qf: any, index: number) => {
+              let keyPointsArray;
+              
+              // Handle the keyPoints property with proper async handling
+              if (Array.isArray(qf.keyPoints)) {
+                keyPointsArray = qf.keyPoints;
+              } else {
+                keyPointsArray = await generateKeyPoints();
+              }
+              
+              return {
+                question: qf.question || questions[index] || `Question ${index + 1}`,
+                score: qf.score || Math.floor(65 + Math.random() * 20),
+                feedback: qf.feedback || "Answer shows basic understanding but could be improved with more details.",
+                difficulty: qf.difficulty || ["Easy", "Medium", "Hard"][Math.floor(Math.random() * 3)],
+                keyPoints: keyPointsArray
+              };
+            })
+          );
+        } else {
+          formattedQuestionFeedback = await generateQuestionFeedback(questions);
+        }
+        
         const formattedFeedback = {
           overallScore: parsedJson.overallScore || 70,
           feedback: parsedJson.feedback || "Overall performance was satisfactory.",
           strengths: Array.isArray(parsedJson.strengths) ? parsedJson.strengths : await generateStrengths(),
           areasToImprove: Array.isArray(parsedJson.areasToImprove) ? parsedJson.areasToImprove : await generateAreasToImprove(),
-          questionFeedback: Array.isArray(parsedJson.questionFeedback) 
-            ? parsedJson.questionFeedback.map((qf: any, index: number) => ({
-                question: qf.question || questions[index] || `Question ${index + 1}`,
-                score: qf.score || Math.floor(65 + Math.random() * 20),
-                feedback: qf.feedback || "Answer shows basic understanding but could be improved with more details.",
-                difficulty: qf.difficulty || ["Easy", "Medium", "Hard"][Math.floor(Math.random() * 3)],
-                keyPoints: Array.isArray(qf.keyPoints) ? qf.keyPoints : await generateKeyPoints()
-              }))
-            : await generateQuestionFeedback(questions)
+          questionFeedback: formattedQuestionFeedback
         };
         
         return formattedFeedback;
