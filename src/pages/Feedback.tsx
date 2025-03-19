@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -78,6 +77,66 @@ const Feedback = () => {
       case 'medium': return "bg-amber-500";
       case 'hard': return "bg-red-500";
       default: return "bg-gray-500";
+    }
+  };
+  
+  const handleDownloadReport = () => {
+    if (!feedback) return;
+    
+    try {
+      let reportContent = `# Interview Feedback Report\n\n`;
+      reportContent += `## Overall Score: ${feedback.overallScore}/100\n\n`;
+      reportContent += `## Overall Feedback\n${feedback.feedback}\n\n`;
+      
+      reportContent += `## Strengths\n`;
+      feedback.strengths.forEach((strength, i) => {
+        reportContent += `${i+1}. ${strength}\n`;
+      });
+      reportContent += '\n';
+      
+      reportContent += `## Areas to Improve\n`;
+      feedback.areasToImprove.forEach((area, i) => {
+        reportContent += `${i+1}. ${area}\n`;
+      });
+      reportContent += '\n';
+      
+      reportContent += `## Question-by-Question Feedback\n\n`;
+      feedback.questionFeedback.forEach((qf, i) => {
+        reportContent += `### Question ${i+1}: ${qf.question}\n`;
+        reportContent += `Score: ${qf.score}/100\n`;
+        reportContent += `Difficulty: ${qf.difficulty || 'Not specified'}\n`;
+        reportContent += `Feedback: ${qf.feedback}\n`;
+        
+        if (qf.keyPoints && qf.keyPoints.length > 0) {
+          reportContent += `Key Points:\n`;
+          qf.keyPoints.forEach((point, j) => {
+            reportContent += `- ${point}\n`;
+          });
+        }
+        reportContent += '\n';
+      });
+      
+      const blob = new Blob([reportContent], { type: 'text/plain' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'interview-feedback-report.txt';
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      
+      toast({
+        title: "Report downloaded",
+        description: "Your interview feedback report has been downloaded successfully.",
+      });
+    } catch (error) {
+      console.error("Error downloading report:", error);
+      toast({
+        title: "Download failed",
+        description: "There was an error downloading your report. Please try again.",
+        variant: "destructive"
+      });
     }
   };
 
@@ -249,7 +308,11 @@ const Feedback = () => {
                     Try Again
                   </Link>
                 </Button>
-                <Button variant="secondary" className="w-full">
+                <Button 
+                  variant="secondary" 
+                  className="w-full"
+                  onClick={handleDownloadReport}
+                >
                   <Download className="mr-2 h-4 w-4" />
                   Download Report
                 </Button>
