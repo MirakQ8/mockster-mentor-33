@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
-import { Mic, Pause } from 'lucide-react';
+import { Mic, MicOff } from 'lucide-react';
 
 interface SpeechToTextProps {
   onTranscript: (text: string) => void;
@@ -18,19 +18,24 @@ const SpeechToText: React.FC<SpeechToTextProps> = ({
   const recognitionRef = useRef<any>(null);
 
   useEffect(() => {
-    // Initialize speech recognition
-    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
-      const SpeechRecognitionAPI = window.SpeechRecognition || window.webkitSpeechRecognition;
+    // Check if the browser supports the Web Speech API
+    const SpeechRecognitionAPI = window.SpeechRecognition || window.webkitSpeechRecognition;
+    
+    if (SpeechRecognitionAPI) {
       recognitionRef.current = new SpeechRecognitionAPI();
       recognitionRef.current.continuous = true;
       recognitionRef.current.interimResults = true;
       
       recognitionRef.current.onresult = (event: any) => {
         let finalTranscript = '';
+        let interimTranscript = '';
+        
         for (let i = event.resultIndex; i < event.results.length; i++) {
           const transcript = event.results[i][0].transcript;
           if (event.results[i].isFinal) {
             finalTranscript += transcript + ' ';
+          } else {
+            interimTranscript += transcript;
           }
         }
         
@@ -44,13 +49,34 @@ const SpeechToText: React.FC<SpeechToTextProps> = ({
       };
       
       recognitionRef.current.onerror = (event: any) => {
-        console.error('Speech recognition error', event.error);
+        console.error('Speech recognition error:', event.error);
+        if (event.error === 'not-allowed') {
+          alert('Microphone access was denied. Please allow microphone access to use speech recognition.');
+          toggleRecording(); // Turn off recording if permission denied
+        }
       };
+      
+      recognitionRef.current.onend = () => {
+        // Restart recognition if we're still supposed to be recording
+        if (isRecording) {
+          try {
+            recognitionRef.current.start();
+          } catch (error) {
+            console.error("Error restarting speech recognition:", error);
+          }
+        }
+      };
+    } else {
+      console.error("Speech Recognition API not supported in this browser");
     }
     
     return () => {
       if (recognitionRef.current) {
-        recognitionRef.current.stop();
+        try {
+          recognitionRef.current.stop();
+        } catch (error) {
+          // Ignore errors when stopping an already stopped recognition
+        }
       }
     };
   }, [onTranscript]);
@@ -58,32 +84,29 @@ const SpeechToText: React.FC<SpeechToTextProps> = ({
   useEffect(() => {
     if (isRecording) {
       if (recognitionRef.current) {
-        recognitionRef.current.start();
+        try {
+          recognitionRef.current.start();
+        } catch (error) {
+          console.error("Error starting speech recognition:", error);
+        }
       }
     } else {
       if (recognitionRef.current) {
-        recognitionRef.current.stop();
+        try {
+          recognitionRef.current.stop();
+        } catch (error) {
+          console.error("Error stopping speech recognition:", error);
+        }
       }
     }
   }, [isRecording]);
 
   return (
-    <Button
-      type="button"
-      variant={isRecording ? "destructive" : "outline"}
-      className="flex-1 py-6 rounded-xl"
-      onClick={toggleRecording}
-    >
-      {isRecording ? (
-        <>
-          <Pause className="mr-2 h-4 w-4" /> Stop Recording
-        </>
-      ) : (
-        <>
-          <Mic className="mr-2 h-4 w-4" /> Record Answer
-        </>
-      )}
-    </Button>
+    <div className="fixed bottom-4 right-4 z-50">
+      <div className="bg-primary p-3 rounded-full shadow-lg animate-pulse">
+        <Mic className="h-6 w-6 text-white" />
+      </div>
+    </div>
   );
 };
 
