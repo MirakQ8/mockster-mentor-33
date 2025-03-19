@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Send, ArrowRight, Video, VideoOff, Timer, Mic, MicOff } from 'lucide-react';
+import { Send, ArrowRight, Video, VideoOff, Timer, Mic, MicOff, Save } from 'lucide-react';
 import PageTransition from '@/components/PageTransition';
 import { motion } from 'framer-motion';
 import { toast } from '@/components/ui/use-toast';
@@ -11,6 +11,8 @@ import VirtualInterviewer from '@/components/VirtualInterviewer';
 import SpeechToText from '@/components/SpeechToText';
 import { analyzeFeedback, generateDefaultQuestions } from '@/lib/gemini';
 import { Card } from '@/components/ui/card';
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
+import { saveRecording } from '@/lib/db';
 
 const Interview = () => {
   const navigate = useNavigate();
@@ -26,6 +28,9 @@ const Interview = () => {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isVideoRecording, setIsVideoRecording] = useState(false);
+  const [recordedChunks, setRecordedChunks] = useState<Blob[]>([]);
+  const [showRecordingAlert, setShowRecordingAlert] = useState(false);
   
   const [questions, setQuestions] = useState<string[]>([]);
   
@@ -103,6 +108,10 @@ const Interview = () => {
         title: "Time's up!",
         description: "Please submit your answer now."
       });
+      
+      if (isVideoRecording) {
+        stopVideoRecording();
+      }
     }
   }, [timeRemaining, isAsking]);
   
@@ -164,6 +173,80 @@ const Interview = () => {
     }
   };
   
+  const startVideoRecording = () => {
+    if (!streamRef.current) {
+      toast({
+        title: "Camera not enabled",
+        description: "Please enable your camera before recording.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    try {
+      const options = { mimeType: 'video/webm;codecs=vp9,opus' };
+      const mediaRecorder = new MediaRecorder(streamRef.current, options);
+      mediaRecorderRef.current = mediaRecorder;
+      
+      const chunks: Blob[] = [];
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data && event.data.size > 0) {
+          chunks.push(event.data);
+        }
+      };
+      
+      mediaRecorder.onstop = async () => {
+        setIsVideoRecording(false);
+        setShowRecordingAlert(false);
+        
+        if (chunks.length > 0) {
+          const recordingBlob = new Blob(chunks, { type: 'video/webm' });
+          setRecordedChunks([...recordedChunks, recordingBlob]);
+          
+          try {
+            // Generate a unique ID for this interview if not already done
+            const interviewId = sessionStorage.getItem('current-interview-id') || 
+              `interview-${Date.now()}`;
+            
+            if (!sessionStorage.getItem('current-interview-id')) {
+              sessionStorage.setItem('current-interview-id', interviewId);
+            }
+            
+            await saveRecording(interviewId, currentQuestionIndex, recordingBlob);
+            
+            toast({
+              title: "Recording saved",
+              description: "Your video response has been saved successfully."
+            });
+          } catch (error) {
+            console.error("Error saving recording:", error);
+            toast({
+              title: "Error saving recording",
+              description: "There was a problem saving your video. Please try again.",
+              variant: "destructive"
+            });
+          }
+        }
+      };
+      
+      mediaRecorder.start(1000); // Collect data every second
+      setIsVideoRecording(true);
+      setShowRecordingAlert(true);
+      
+      toast({
+        title: "Recording started",
+        description: "Your video is now being recorded."
+      });
+    } catch (error) {
+      console.error("Error starting recording:", error);
+      toast({
+        title: "Recording error",
+        description: "Could not start recording. Please try again.",
+        variant: "destructive"
+      });
+    }
+  };
+  
   const stopVideoRecording = () => {
     if (streamRef.current) {
       streamRef.current.getTracks().forEach(track => {
@@ -182,6 +265,8 @@ const Interview = () => {
     }
     
     setTimeRemaining(null);
+    setIsVideoRecording(false);
+    setShowRecordingAlert(false);
   };
   
   // Clean up resources when component unmounts
@@ -306,6 +391,18 @@ const Interview = () => {
           </div>
         </div>
         
+        {showRecordingAlert && (
+          <Alert variant="destructive" className="mb-4 bg-red-50 border-red-200">
+            <div className="flex items-center">
+              <div className="w-3 h-3 bg-red-500 rounded-full mr-2 animate-pulse"></div>
+              <AlertTitle>Recording in progress</AlertTitle>
+            </div>
+            <AlertDescription>
+              Your video is currently being recorded. Continue with your answer.
+            </AlertDescription>
+          </Alert>
+        )}
+        
         {isLoading ? (
           <div className="flex justify-center items-center h-[400px]">
             <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
@@ -341,6 +438,35 @@ const Interview = () => {
                       <div className="absolute top-2 right-2 bg-background/80 text-foreground px-3 py-1 rounded-full text-sm flex items-center shadow-md border border-border">
                         <Timer className="w-4 h-4 mr-2 text-primary" />
                         {formatTime(timeRemaining)}
+                      </div>
+                    )}
+                    
+                    {videoEnabled && !isAsking && !isVideoRecording && (
+                      <div className="absolute bottom-2 right-2 flex space-x-2">
+                        <Button 
+                          size="sm" 
+                          onClick={startVideoRecording}
+                          className="bg-red-500 hover:bg-red-600 text-white"
+                        >
+                          <Save className="mr-1 h-4 w-4" />
+                          Record
+                        </Button>
+                      </div>
+                    )}
+                    
+                    {isVideoRecording && (
+                      <div className="absolute bottom-2 right-2">
+                        <Button 
+                          size="sm" 
+                          variant="destructive"
+                          onClick={() => {
+                            if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
+                              mediaRecorderRef.current.stop();
+                            }
+                          }}
+                        >
+                          Stop Recording
+                        </Button>
                       </div>
                     )}
                   </Card>
