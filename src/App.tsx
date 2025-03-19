@@ -16,8 +16,8 @@ import SignIn from "./pages/SignIn";
 import SignUp from "./pages/SignUp";
 import AuthWrapper from "./components/auth/AuthWrapper";
 
-// Replace with your actual Clerk publishable key
-const CLERK_PUBLISHABLE_KEY = "YOUR_CLERK_PUBLISHABLE_KEY";
+// Clerk publishable key
+const CLERK_PUBLISHABLE_KEY = "pk_test_c291bmQtc3R1cmdlb24tMzIuY2xlcmsuYWNjb3VudHMuZGV2JA";
 
 const queryClient = new QueryClient();
 
