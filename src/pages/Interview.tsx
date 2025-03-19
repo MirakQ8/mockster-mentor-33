@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -111,20 +112,37 @@ const Interview = () => {
       setVideoEnabled(false);
     } else {
       try {
+        // Request both video and audio permissions for a complete interview experience
         const stream = await navigator.mediaDevices.getUserMedia({ 
-          video: true,
-          audio: false
+          video: {
+            width: { ideal: 1280 },
+            height: { ideal: 720 },
+            facingMode: "user"
+          },
+          audio: true
         });
         
         if (stream) {
           streamRef.current = stream;
           
+          // Ensure we have a valid video element reference
           if (videoRef.current) {
             videoRef.current.srcObject = stream;
+            videoRef.current.muted = true; // Mute to prevent feedback
+            
+            // Make sure to play the video once it's loaded
             videoRef.current.onloadedmetadata = () => {
-              videoRef.current?.play().catch(e => {
-                console.error("Error playing video:", e);
-              });
+              if (videoRef.current) {
+                videoRef.current.play()
+                  .catch(e => {
+                    console.error("Error playing video:", e);
+                    toast({
+                      title: "Camera error",
+                      description: "Unable to display camera feed. Please try again.",
+                      variant: "destructive"
+                    });
+                  });
+              }
             };
           }
           
@@ -165,6 +183,13 @@ const Interview = () => {
     
     setTimeRemaining(null);
   };
+  
+  // Clean up resources when component unmounts
+  useEffect(() => {
+    return () => {
+      stopVideoRecording();
+    };
+  }, []);
   
   const handleNextQuestion = () => {
     if (questions.length === 0) {
@@ -308,6 +333,7 @@ const Interview = () => {
                     <video 
                       ref={videoRef} 
                       autoPlay 
+                      playsInline
                       muted 
                       className="w-full h-full object-cover"
                     />
