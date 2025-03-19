@@ -1,9 +1,8 @@
-
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { ArrowRight, CheckCircle, Award, BarChart3, HelpCircle, Info, User } from 'lucide-react';
+import { ArrowRight, CheckCircle, Award, BarChart3, HelpCircle } from 'lucide-react';
 import PageTransition from '@/components/PageTransition';
 import { motion } from 'framer-motion';
 
@@ -92,9 +91,6 @@ const Index = () => {
                 Get Started
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Link>
-            </Button>
-            <Button asChild variant="outline" size="lg" className="rounded-full px-8">
-              <Link to="/interview">Try Demo</Link>
             </Button>
           </motion.div>
         </div>
@@ -193,21 +189,6 @@ const Index = () => {
                 <p className="text-sm text-muted-foreground">
                   AI-powered interview preparation tool
                 </p>
-              </div>
-              
-              <div className="flex space-x-8 mb-6 md:mb-0">
-                <Link to="/" className="text-sm flex items-center text-muted-foreground hover:text-foreground">
-                  <Info className="mr-1 h-4 w-4" />
-                  About
-                </Link>
-                <Link to="/" className="text-sm flex items-center text-muted-foreground hover:text-foreground">
-                  <HelpCircle className="mr-1 h-4 w-4" />
-                  FAQ
-                </Link>
-                <Link to="/" className="text-sm flex items-center text-muted-foreground hover:text-foreground">
-                  <User className="mr-1 h-4 w-4" />
-                  Account
-                </Link>
               </div>
             </div>
             
