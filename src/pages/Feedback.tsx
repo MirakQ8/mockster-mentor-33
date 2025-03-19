@@ -4,10 +4,11 @@ import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
-import { Redo, Download, ThumbsUp, ThumbsDown, Laptop } from 'lucide-react';
+import { Redo, Download, ThumbsUp, ThumbsDown, Laptop, BookOpen, ArrowUpDown } from 'lucide-react';
 import PageTransition from '@/components/PageTransition';
 import { motion } from 'framer-motion';
 import { toast } from '@/components/ui/use-toast';
+import { Badge } from '@/components/ui/badge';
 
 type FeedbackType = {
   overallScore: number;
@@ -18,12 +19,15 @@ type FeedbackType = {
     question: string;
     score: number;
     feedback: string;
+    difficulty?: string;
+    keyPoints?: string[];
   }>;
 };
 
 const Feedback = () => {
   const [feedback, setFeedback] = useState<FeedbackType | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [sortBy, setSortBy] = useState<'order' | 'score' | 'difficulty'>('order');
 
   useEffect(() => {
     const fetchFeedback = () => {
@@ -66,6 +70,16 @@ const Feedback = () => {
     if (score >= 70) return "bg-amber-500";
     return "bg-red-500";
   };
+  
+  const getDifficultyColor = (difficulty?: string) => {
+    if (!difficulty) return "bg-gray-500";
+    switch (difficulty.toLowerCase()) {
+      case 'easy': return "bg-green-500";
+      case 'medium': return "bg-amber-500";
+      case 'hard': return "bg-red-500";
+      default: return "bg-gray-500";
+    }
+  };
 
   const container = {
     hidden: { opacity: 0 },
@@ -80,6 +94,30 @@ const Feedback = () => {
   const item = {
     hidden: { opacity: 0, y: 20 },
     show: { opacity: 1, y: 0 }
+  };
+  
+  const getSortedQuestionFeedback = () => {
+    if (!feedback?.questionFeedback) return [];
+    
+    const sorted = [...feedback.questionFeedback];
+    
+    switch (sortBy) {
+      case 'score':
+        return sorted.sort((a, b) => b.score - a.score);
+      case 'difficulty':
+        return sorted.sort((a, b) => {
+          const difficultyOrder = { 'hard': 0, 'medium': 1, 'easy': 2, undefined: 3 };
+          const diffA = a.difficulty?.toLowerCase() as keyof typeof difficultyOrder || undefined;
+          const diffB = b.difficulty?.toLowerCase() as keyof typeof difficultyOrder || undefined;
+          return (difficultyOrder[diffA] ?? 3) - (difficultyOrder[diffB] ?? 3);
+        });
+      default:
+        return sorted; // Keep original order
+    }
+  };
+  
+  const handleSortChange = (newSortBy: 'order' | 'score' | 'difficulty') => {
+    setSortBy(newSortBy);
   };
   
   if (isLoading) {
@@ -226,20 +264,68 @@ const Feedback = () => {
           animate="show"
           className="space-y-4 mb-8"
         >
-          <h2 className="text-xl font-semibold mb-4">Question-by-Question Feedback</h2>
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-semibold">Question-by-Question Feedback</h2>
+            <div className="flex gap-2">
+              <Button 
+                size="sm" 
+                variant={sortBy === 'order' ? 'default' : 'outline'} 
+                onClick={() => handleSortChange('order')}
+              >
+                Default
+              </Button>
+              <Button 
+                size="sm" 
+                variant={sortBy === 'score' ? 'default' : 'outline'} 
+                onClick={() => handleSortChange('score')}
+              >
+                <ArrowUpDown className="w-4 h-4 mr-1" />
+                Score
+              </Button>
+              <Button 
+                size="sm" 
+                variant={sortBy === 'difficulty' ? 'default' : 'outline'} 
+                onClick={() => handleSortChange('difficulty')}
+              >
+                <BookOpen className="w-4 h-4 mr-1" />
+                Difficulty
+              </Button>
+            </div>
+          </div>
           
-          {feedback.questionFeedback.map((qFeedback, index) => (
+          {getSortedQuestionFeedback().map((qFeedback, index) => (
             <motion.div key={index} variants={item}>
               <Card className="p-4 rounded-xl mb-4">
                 <div className="mb-3">
                   <div className="flex justify-between items-center mb-1">
-                    <h3 className="font-medium text-sm">Question {index + 1}</h3>
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-medium text-sm">Question {index + 1}</h3>
+                      {qFeedback.difficulty && (
+                        <Badge className={`${getDifficultyColor(qFeedback.difficulty)}`}>
+                          {qFeedback.difficulty}
+                        </Badge>
+                      )}
+                    </div>
                     <span className={`font-bold ${getScoreColor(qFeedback.score)}`}>{qFeedback.score}/100</span>
                   </div>
                   <Progress value={qFeedback.score} className={`h-2 ${getProgressColor(qFeedback.score)}`} />
                 </div>
                 <p className="text-sm font-medium mb-2">{qFeedback.question}</p>
-                <p className="text-sm text-muted-foreground">{qFeedback.feedback}</p>
+                <p className="text-sm text-muted-foreground mb-3">{qFeedback.feedback}</p>
+                
+                {qFeedback.keyPoints && qFeedback.keyPoints.length > 0 && (
+                  <div className="mt-2 bg-muted/30 p-3 rounded-lg">
+                    <h4 className="text-xs font-semibold uppercase mb-2">Key Points</h4>
+                    <ul className="space-y-1">
+                      {qFeedback.keyPoints.map((point, i) => (
+                        <li key={i} className="text-xs flex items-start">
+                          <span className="text-primary mr-2">•</span>
+                          {point}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
               </Card>
             </motion.div>
           ))}

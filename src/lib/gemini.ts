@@ -1,4 +1,3 @@
-
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
 // Gemini API key - this should be replaced with a proper API key in production
@@ -78,6 +77,8 @@ export const analyzeFeedback = async (
     question: string;
     score: number;
     feedback: string;
+    difficulty: string;
+    keyPoints: string[];
   }>;
 }> => {
   try {
@@ -102,7 +103,9 @@ export const analyzeFeedback = async (
           {
             "question": (the question text),
             "score": (number between 0-100),
-            "feedback": (specific technical feedback for this answer)
+            "feedback": (specific detailed feedback for this answer),
+            "difficulty": (a rating of "Easy", "Medium", or "Hard" for the question),
+            "keyPoints": [list of 2-3 key points the candidate addressed or missed]
           },
           ...for each question
         ]
@@ -110,6 +113,8 @@ export const analyzeFeedback = async (
       
       For technical questions, provide specific feedback on the accuracy and depth of technical knowledge.
       Focus on constructive criticism and actionable advice.
+      Be detailed in your feedback for each question.
+      Evaluate the difficulty of each question based on its complexity and depth.
     `;
     
     const result = await model.generateContent(prompt);
@@ -147,7 +152,13 @@ export const analyzeFeedback = async (
       questionFeedback: questions.map((q, i) => ({
         question: q,
         score: 75 + Math.floor(Math.random() * 15),
-        feedback: "Good response that could be enhanced with more specific examples."
+        feedback: "Good response that could be enhanced with more specific examples.",
+        difficulty: ["Easy", "Medium", "Hard"][Math.floor(Math.random() * 3)],
+        keyPoints: [
+          "Demonstrated understanding of core concepts",
+          "Could improve with more specific technical details",
+          "Good communication of complex ideas"
+        ]
       }))
     };
   }
