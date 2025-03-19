@@ -15,7 +15,6 @@ const Navbar: React.FC = () => {
     { path: '/interview', label: 'Interview' },
     { path: '/feedback', label: 'Feedback' },
     { path: '/analysis', label: 'CV Analysis' },
-    { path: '/history', label: 'History' },
   ];
 
   return (
