@@ -81,7 +81,6 @@ const Interview = () => {
   const currentQuestion = questions[currentQuestionIndex] || "Loading question...";
   const progress = questions.length > 0 ? ((currentQuestionIndex + 1) / questions.length) * 100 : 0;
   
-  // Create a new interview record when the component loads
   useEffect(() => {
     const createNewInterview = async () => {
       if (user && questions.length > 0 && !interviewId) {
@@ -100,12 +99,9 @@ const Interview = () => {
             }
           }
           
-          // In a real implementation, this would be an API call to the backend
-          // For demo purposes, we'll create a mock interview record and store its ID
           const mockInterviewId = Date.now(); // Using timestamp as a mock ID
           setInterviewId(mockInterviewId);
           
-          // Save the initial interview data to sessionStorage
           const interviewData = {
             id: mockInterviewId,
             userId: user.id,
@@ -169,7 +165,6 @@ const Interview = () => {
       setVideoEnabled(false);
     } else {
       try {
-        // Request both video and audio permissions for a complete interview experience
         const stream = await navigator.mediaDevices.getUserMedia({ 
           video: {
             width: { ideal: 1280 },
@@ -182,12 +177,10 @@ const Interview = () => {
         if (stream) {
           streamRef.current = stream;
           
-          // Ensure we have a valid video element reference
           if (videoRef.current) {
             videoRef.current.srcObject = stream;
-            videoRef.current.muted = true; // Mute to prevent feedback
+            videoRef.current.muted = true;
             
-            // Make sure to play the video once it's loaded
             videoRef.current.onloadedmetadata = () => {
               if (videoRef.current) {
                 videoRef.current.play()
@@ -241,7 +234,6 @@ const Interview = () => {
     setTimeRemaining(null);
   };
   
-  // Clean up resources when component unmounts
   useEffect(() => {
     return () => {
       stopVideoRecording();
@@ -258,14 +250,12 @@ const Interview = () => {
       return;
     }
     
-    // Save the current answer
     setAnswers(prev => {
       const updatedAnswers = [...prev];
       updatedAnswers[currentQuestionIndex] = answer;
       return updatedAnswers;
     });
     
-    // Update the interview data in sessionStorage
     if (interviewId) {
       try {
         const storedData = sessionStorage.getItem('current-interview');
@@ -320,7 +310,6 @@ const Interview = () => {
       
       const feedback = await analyzeFeedback(questions, finalAnswers);
       
-      // Update the interview in sessionStorage as completed
       if (interviewId) {
         const storedData = sessionStorage.getItem('current-interview');
         if (storedData) {
@@ -330,20 +319,17 @@ const Interview = () => {
             ...interviewData,
             status: 'completed',
             answers: finalAnswers,
-            feedback: feedback.overallFeedback,
+            feedback: feedback.feedback,
             overallScore: feedback.overallScore,
             questionFeedback: feedback.questionFeedback,
             completedAt: new Date().toISOString()
           };
           
-          // Save the completed interview
           sessionStorage.setItem('interview-feedback', JSON.stringify(feedback));
           sessionStorage.setItem('completed-interview', JSON.stringify(completedInterview));
           
-          // In a real implementation, this would be an API call to the backend
           console.log("Completed interview:", completedInterview);
           
-          // Add to interview history in sessionStorage
           const historyString = sessionStorage.getItem('interview-history');
           const history = historyString ? JSON.parse(historyString) : [];
           history.push(completedInterview);

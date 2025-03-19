@@ -62,7 +62,20 @@ const fetchInterviews = async (userId: string): Promise<Interview[]> => {
     console.log('Fetched interviews from storage:', interviews);
     
     if (interviews.length === 0) {
-      // If no interviews are found, return some sample data
+      // If no interviews are found, check if there's a completed interview
+      const completedInterviewString = sessionStorage.getItem('completed-interview');
+      if (completedInterviewString) {
+        const completedInterview = JSON.parse(completedInterviewString);
+        if (completedInterview.userId === userId) {
+          // Add it to history and save
+          interviews = [completedInterview];
+          sessionStorage.setItem('interview-history', JSON.stringify(interviews));
+          console.log('Added completed interview to history:', completedInterview);
+          return interviews;
+        }
+      }
+      
+      // If still no interviews, return some sample data
       return [
         {
           id: 1,
@@ -136,6 +149,9 @@ const History: React.FC = () => {
     queryKey: ['interviews', userId],
     queryFn: () => fetchInterviews(userId),
     enabled: !!userId,
+    // Force the query to always refetch when navigating to this page
+    refetchOnMount: true,
+    refetchOnWindowFocus: true,
   });
 
   if (isLoading) {
