@@ -39,9 +39,14 @@ const CVAnalysis = () => {
       // Read the file content
       const fileText = await readFileAsText(file);
       
-      // Call Gemini API to analyze the CV
-      const cvAnalysis = await analyzeCV(fileText, 5);
+      console.log("Analyzing CV content...");
       
+      // Call Gemini API to analyze the CV - pass 5 for number of questions
+      const cvAnalysis = await analyzeCV(fileText, 10);
+      
+      console.log("Received analysis from Gemini API:", cvAnalysis);
+      
+      // Set the analysis state with the data from Gemini
       setAnalysis(cvAnalysis);
       
       toast({

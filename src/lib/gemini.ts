@@ -1,4 +1,3 @@
-
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
 // Gemini API key
@@ -19,7 +18,7 @@ export const analyzeCV = async (cvText: string, yearsExperience: number): Promis
       Analyze this CV text and extract the following information:
       1. The most likely job title based on experience (be very specific, if it's a developer specify what kind)
       2. A list of 5-10 key skills mentioned
-      3. Generate 10 interview questions specifically tailored for this candidate, considering their ${yearsExperience} years of experience.
+      3. Generate ${yearsExperience} interview questions specifically tailored for this candidate, considering their years of experience.
       Make at least half of these questions technical and specific to their field.
       
       Format the response as JSON with 'jobTitle', 'skills' (array), and 'questions' (array) properties.
@@ -37,7 +36,9 @@ export const analyzeCV = async (cvText: string, yearsExperience: number): Promis
                       text.match(/{[\s\S]*}/);
                       
     if (jsonMatch) {
-      return JSON.parse(jsonMatch[0].replace(/```json|```/g, '').trim());
+      const parsedJson = JSON.parse(jsonMatch[0].replace(/```json|```/g, '').trim());
+      console.log("Parsed CV analysis from Gemini:", parsedJson);
+      return parsedJson;
     }
     
     throw new Error("Could not parse Gemini API response");
@@ -51,12 +52,7 @@ export const analyzeCV = async (cvText: string, yearsExperience: number): Promis
         "Describe a challenging project you worked on and how you overcame technical obstacles.",
         "How do you stay updated with the latest programming trends and technologies?",
         "Can you explain the difference between RESTful and GraphQL APIs?",
-        "What's your approach to debugging a complex application issue?",
-        "Walk me through your process for optimizing application performance.",
-        "How do you handle code reviews and feedback from team members?",
-        "Explain how you would implement authentication in a web application.",
-        "What testing methodologies do you use in your development process?",
-        "How would you architect a scalable microservices system?"
+        "What's your approach to debugging a complex application issue?"
       ]
     };
   }
