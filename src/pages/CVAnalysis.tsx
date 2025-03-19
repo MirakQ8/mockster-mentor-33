@@ -15,9 +15,7 @@ const CVAnalysis = () => {
   const [analysis, setAnalysis] = useState<{
     jobTitle: string;
     skills: string[];
-    strengths: string[];
-    improvements: string[];
-    technicalQuestions: string[];
+    questions: string[];
   } | null>(null);
 
   const handleFileChange = (selectedFile: File) => {
@@ -42,24 +40,9 @@ const CVAnalysis = () => {
       const fileText = await readFileAsText(file);
       
       // Call Gemini API to analyze the CV
-      const cvAnalysis = await analyzeCV(fileText, 3);
+      const cvAnalysis = await analyzeCV(fileText, 5);
       
-      // Simulate deeper analysis with more fields than what the API returns
-      setAnalysis({
-        jobTitle: cvAnalysis.jobTitle,
-        skills: cvAnalysis.skills,
-        strengths: [
-          "Clear presentation of technical skills",
-          "Good project descriptions",
-          "Relevant experience highlighted"
-        ],
-        improvements: [
-          "Add more quantifiable achievements",
-          "Include relevant certifications",
-          "Tailor objective statement for specific roles"
-        ],
-        technicalQuestions: cvAnalysis.questions.filter((q, i) => i < 5)
-      });
+      setAnalysis(cvAnalysis);
       
       toast({
         title: "CV Analysis Complete",
@@ -169,50 +152,34 @@ const CVAnalysis = () => {
                   
                   <div>
                     <h3 className="font-medium text-lg mb-2 flex items-center">
-                      <CheckCircle className="mr-2 h-4 w-4 text-green-500" />
-                      CV Strengths
-                    </h3>
-                    <ul className="space-y-1">
-                      {analysis.strengths.map((strength, index) => (
-                        <li key={index} className="text-sm flex items-start">
-                          <span className="text-green-500 mr-2">•</span>
-                          {strength}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                  
-                  <div>
-                    <h3 className="font-medium text-lg mb-2 flex items-center">
-                      <AlertTriangle className="mr-2 h-4 w-4 text-amber-500" />
-                      Suggested Improvements
-                    </h3>
-                    <ul className="space-y-1">
-                      {analysis.improvements.map((improvement, index) => (
-                        <li key={index} className="text-sm flex items-start">
-                          <span className="text-amber-500 mr-2">•</span>
-                          {improvement}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                  
-                  <div>
-                    <h3 className="font-medium text-lg mb-2 flex items-center">
                       <Award className="mr-2 h-4 w-4 text-primary" />
-                      Sample Technical Questions
+                      Generated Interview Questions
                     </h3>
                     <p className="text-sm text-muted-foreground mb-2">
                       Based on your profile, here are some questions you might encounter:
                     </p>
                     <ul className="space-y-2">
-                      {analysis.technicalQuestions.map((question, index) => (
+                      {analysis.questions.map((question, index) => (
                         <li key={index} className="text-sm bg-muted p-2 rounded">
                           {question}
                         </li>
                       ))}
                     </ul>
                   </div>
+                </div>
+                
+                <div className="mt-6 pt-6 border-t">
+                  <h3 className="font-medium text-lg mb-2">What's Next?</h3>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Ready to practice with these questions? Try our virtual interview!
+                  </p>
+                  <Button 
+                    variant="outline" 
+                    className="w-full"
+                    onClick={() => window.location.href = '/interview'}
+                  >
+                    Start Practice Interview
+                  </Button>
                 </div>
               </Card>
             ) : (
@@ -232,6 +199,10 @@ const CVAnalysis = () => {
             )}
           </motion.div>
         </div>
+        
+        <footer className="mt-16 text-center text-muted-foreground text-sm">
+          <p>© 2025 Mockster. All rights reserved.</p>
+        </footer>
       </div>
     </PageTransition>
   );
