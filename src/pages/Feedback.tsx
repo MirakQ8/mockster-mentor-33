@@ -201,18 +201,18 @@ const Feedback = () => {
         >
           <h2 className="text-xl font-semibold mb-4">Question-by-Question Feedback</h2>
           
-          {feedback.questionFeedback.map((item, index) => (
+          {feedback.questionFeedback.map((qFeedback, index) => (
             <motion.div key={index} variants={item}>
               <Card className="p-4 rounded-xl mb-4">
                 <div className="mb-3">
                   <div className="flex justify-between items-center mb-1">
                     <h3 className="font-medium text-sm">Question {index + 1}</h3>
-                    <span className={`font-bold ${getScoreColor(item.score)}`}>{item.score}/100</span>
+                    <span className={`font-bold ${getScoreColor(qFeedback.score)}`}>{qFeedback.score}/100</span>
                   </div>
-                  <Progress value={item.score} className={`h-2 ${getProgressColor(item.score)}`} />
+                  <Progress value={qFeedback.score} className={`h-2 ${getProgressColor(qFeedback.score)}`} />
                 </div>
-                <p className="text-sm font-medium mb-2">{item.question}</p>
-                <p className="text-sm text-muted-foreground">{item.feedback}</p>
+                <p className="text-sm font-medium mb-2">{qFeedback.question}</p>
+                <p className="text-sm text-muted-foreground">{qFeedback.feedback}</p>
               </Card>
             </motion.div>
           ))}
