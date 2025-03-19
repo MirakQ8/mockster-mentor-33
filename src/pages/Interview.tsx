@@ -13,6 +13,7 @@ import { analyzeFeedback, generateDefaultQuestions } from '@/lib/gemini';
 import { Card } from '@/components/ui/card';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import VideoRecorder from '@/components/VideoRecorder';
 
 const Interview = () => {
   const navigate = useNavigate();
@@ -29,6 +30,7 @@ const Interview = () => {
   const streamRef = useRef<MediaStream | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [cameraError, setCameraError] = useState<string | null>(null);
+  const [isVideoRecording, setIsVideoRecording] = useState(false);
   
   const [questions, setQuestions] = useState<string[]>([]);
   
@@ -126,7 +128,7 @@ const Interview = () => {
           height: { ideal: 720 },
           facingMode: "user"
         },
-        audio: false // We don't need audio for the video feed
+        audio: true // We need audio for recording
       });
       
       if (stream) {
@@ -195,6 +197,32 @@ const Interview = () => {
     
     setTimeRemaining(null);
     setCameraError(null);
+    setIsVideoRecording(false);
+  };
+  
+  const handleToggleVideoRecording = () => {
+    if (!videoEnabled) {
+      toast({
+        title: "Camera is required",
+        description: "Please enable your camera first to record video.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    setIsVideoRecording(!isVideoRecording);
+    
+    if (!isVideoRecording) {
+      toast({
+        title: "Recording started",
+        description: "Your video is now being recorded.",
+      });
+    } else {
+      toast({
+        title: "Recording stopped",
+        description: "Your video recording has been saved.",
+      });
+    }
   };
   
   const handleNextQuestion = () => {
@@ -205,6 +233,15 @@ const Interview = () => {
         variant: "destructive"
       });
       return;
+    }
+    
+    // Stop recording if it's active
+    if (isVideoRecording) {
+      setIsVideoRecording(false);
+      toast({
+        title: "Recording stopped",
+        description: "Your video recording has been saved for this question.",
+      });
     }
     
     if (currentQuestionIndex < questions.length - 1) {
@@ -303,7 +340,7 @@ const Interview = () => {
           >
             <h1 className="text-3xl font-bold mb-2">Mock Interview</h1>
             <p className="text-muted-foreground">
-              Question {currentQuestionIndex +.1} of {questions.length}
+              Question {currentQuestionIndex + 1} of {questions.length}
             </p>
           </motion.div>
           
@@ -348,6 +385,13 @@ const Interview = () => {
                       muted 
                       className="w-full h-full object-cover"
                     />
+                    
+                    {isVideoRecording && (
+                      <div className="absolute top-2 left-2 bg-destructive text-destructive-foreground px-3 py-1 rounded-full text-sm shadow-md animate-pulse">
+                        REC
+                      </div>
+                    )}
+                    
                     {timeRemaining !== null && (
                       <div className="absolute top-2 right-2 bg-background/80 text-foreground px-3 py-1 rounded-full text-sm flex items-center shadow-md border border-border">
                         <Timer className="w-4 h-4 mr-2 text-primary" />
@@ -404,6 +448,27 @@ const Interview = () => {
                   
                   <Button
                     type="button"
+                    variant={isVideoRecording ? "destructive" : "default"}
+                    size="sm"
+                    onClick={handleToggleVideoRecording}
+                    className="w-full"
+                    disabled={isAsking || !videoEnabled}
+                  >
+                    {isVideoRecording ? (
+                      <>
+                        <VideoOff className="mr-2 h-4 w-4" />
+                        Stop Recording
+                      </>
+                    ) : (
+                      <>
+                        <Video className="mr-2 h-4 w-4" />
+                        Record Video
+                      </>
+                    )}
+                  </Button>
+                  
+                  <Button
+                    type="button"
                     variant={isRecording ? "destructive" : "outline"}
                     size="sm"
                     onClick={toggleRecording}
@@ -413,7 +478,7 @@ const Interview = () => {
                     {isRecording ? (
                       <>
                         <MicOff className="mr-2 h-4 w-4" />
-                        Stop Recording
+                        Stop Audio
                       </>
                     ) : (
                       <>
@@ -459,6 +524,14 @@ const Interview = () => {
               </div>
             </div>
           </motion.div>
+        )}
+        
+        {isVideoRecording && videoEnabled && streamRef.current && (
+          <VideoRecorder 
+            stream={streamRef.current} 
+            isRecording={isVideoRecording} 
+            questionNumber={currentQuestionIndex + 1}
+          />
         )}
         
         {isRecording && (
