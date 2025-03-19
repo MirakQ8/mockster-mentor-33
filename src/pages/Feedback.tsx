@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -7,50 +7,53 @@ import { Progress } from '@/components/ui/progress';
 import { Redo, Download, ThumbsUp, ThumbsDown, Laptop } from 'lucide-react';
 import PageTransition from '@/components/PageTransition';
 import { motion } from 'framer-motion';
+import { toast } from '@/components/ui/use-toast';
+
+type FeedbackType = {
+  overallScore: number;
+  feedback: string;
+  strengths: string[];
+  areasToImprove: string[];
+  questionFeedback: Array<{
+    question: string;
+    score: number;
+    feedback: string;
+  }>;
+};
 
 const Feedback = () => {
-  // Mock feedback data - in a real app, this would come from the backend
-  const feedback = {
-    overallScore: 82,
-    feedback: "Overall, your responses were clear and professional. You effectively demonstrated your experience and skills, but could provide more specific examples to support your claims.",
-    strengths: [
-      "Clear communication and professional tone",
-      "Good understanding of the technical aspects of the role",
-      "Positive attitude and enthusiasm"
-    ],
-    areasToImprove: [
-      "Include more specific examples from your experience",
-      "Elaborate more on quantifiable achievements",
-      "Structure your responses with a clearer beginning, middle, and end"
-    ],
-    questionFeedback: [
-      {
-        question: "Tell me about your background and experience in this field.",
-        score: 85,
-        feedback: "Good overview of your experience, but could be more specific about key achievements."
-      },
-      {
-        question: "Describe a challenging project you worked on and how you overcame obstacles.",
-        score: 78,
-        feedback: "Well structured response, but would benefit from more details on the specific actions you took."
-      },
-      {
-        question: "How do you stay updated with the latest trends and technologies in your industry?",
-        score: 88,
-        feedback: "Excellent answer with specific examples of learning resources and methods."
-      },
-      {
-        question: "What are your strengths and weaknesses related to this position?",
-        score: 75,
-        feedback: "Good self-awareness, but try to frame weaknesses as areas of growth with steps you're taking to improve."
-      },
-      {
-        question: "Where do you see yourself professionally in 5 years?",
-        score: 84,
-        feedback: "Clear vision that aligns well with the career path for this role."
+  const [feedback, setFeedback] = useState<FeedbackType | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchFeedback = () => {
+      try {
+        const savedFeedback = sessionStorage.getItem('interview-feedback');
+        
+        if (savedFeedback) {
+          const parsedFeedback = JSON.parse(savedFeedback);
+          setFeedback(parsedFeedback);
+        } else {
+          toast({
+            title: "No feedback found",
+            description: "Please complete an interview to view feedback.",
+            variant: "destructive",
+          });
+        }
+      } catch (error) {
+        console.error("Error fetching feedback:", error);
+        toast({
+          title: "Error loading feedback",
+          description: "There was a problem loading your feedback.",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(false);
       }
-    ]
-  };
+    };
+    
+    fetchFeedback();
+  }, []);
 
   const getScoreColor = (score: number) => {
     if (score >= 85) return "text-green-500";
@@ -78,6 +81,32 @@ const Feedback = () => {
     hidden: { opacity: 0, y: 20 },
     show: { opacity: 1, y: 0 }
   };
+  
+  if (isLoading) {
+    return (
+      <PageTransition>
+        <div className="min-h-screen pt-24 pb-12 px-4 flex items-center justify-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+        </div>
+      </PageTransition>
+    );
+  }
+  
+  if (!feedback) {
+    return (
+      <PageTransition>
+        <div className="min-h-screen pt-24 pb-12 px-4 max-w-4xl mx-auto text-center">
+          <h1 className="text-3xl font-bold mb-6">No Feedback Available</h1>
+          <p className="text-muted-foreground mb-8">
+            Please complete an interview to receive feedback on your performance.
+          </p>
+          <Button asChild size="lg">
+            <Link to="/interview">Start Interview</Link>
+          </Button>
+        </div>
+      </PageTransition>
+    );
+  }
 
   return (
     <PageTransition>
@@ -182,11 +211,9 @@ const Feedback = () => {
                     Try Again
                   </Link>
                 </Button>
-                <Button asChild variant="secondary" className="w-full">
-                  <Link to="/">
-                    <Download className="mr-2 h-4 w-4" />
-                    Download Report
-                  </Link>
+                <Button variant="secondary" className="w-full">
+                  <Download className="mr-2 h-4 w-4" />
+                  Download Report
                 </Button>
               </div>
             </Card>

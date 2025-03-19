@@ -6,10 +6,12 @@ import { FileUpload } from '@/components';
 import { toast } from '@/components/ui/use-toast';
 import PageTransition from '@/components/PageTransition';
 import { motion } from 'framer-motion';
-import { Loader2, CheckCircle, Award, AlertTriangle } from 'lucide-react';
+import { Loader2, CheckCircle, Award, AlertTriangle, FileText, Sparkles } from 'lucide-react';
 import { analyzeCV } from '@/lib/gemini';
+import { useNavigate } from 'react-router-dom';
 
 const CVAnalysis = () => {
+  const navigate = useNavigate();
   const [file, setFile] = useState<File | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysis, setAnalysis] = useState<{
@@ -82,6 +84,10 @@ const CVAnalysis = () => {
       reader.readAsText(file);
     });
   };
+  
+  const startInterview = () => {
+    navigate('/interview');
+  };
 
   return (
     <PageTransition>
@@ -94,7 +100,7 @@ const CVAnalysis = () => {
         >
           <h1 className="text-3xl font-bold mb-2">CV Analysis & Recommendations</h1>
           <p className="text-muted-foreground">
-            Get personalized insights and improvement suggestions for your CV
+            Get personalized insights and interview questions based on your CV
           </p>
         </motion.div>
         
@@ -104,8 +110,14 @@ const CVAnalysis = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2, duration: 0.5 }}
           >
-            <Card className="p-6 rounded-xl h-full">
-              <h2 className="text-xl font-semibold mb-4">Upload Your CV</h2>
+            <Card className="p-6 rounded-xl h-full shadow-lg border-primary/10 hover:border-primary/30 transition-colors">
+              <div className="flex items-center mb-4">
+                <FileText className="h-5 w-5 text-primary mr-2" />
+                <h2 className="text-xl font-semibold">Upload Your CV</h2>
+              </div>
+              <p className="text-muted-foreground mb-6">
+                Upload your CV in PDF or TXT format to get personalized analysis and interview questions.
+              </p>
               <FileUpload 
                 onFileChange={handleFileChange} 
                 className="mb-6"
@@ -121,7 +133,10 @@ const CVAnalysis = () => {
                     Analyzing CV...
                   </>
                 ) : (
-                  "Analyze CV"
+                  <>
+                    <Sparkles className="mr-2 h-4 w-4" />
+                    Analyze CV
+                  </>
                 )}
               </Button>
             </Card>
@@ -133,8 +148,11 @@ const CVAnalysis = () => {
             transition={{ delay: 0.3, duration: 0.5 }}
           >
             {analysis ? (
-              <Card className="p-6 rounded-xl h-full">
-                <h2 className="text-xl font-semibold mb-4">Analysis Results</h2>
+              <Card className="p-6 rounded-xl h-full shadow-lg border-primary/10">
+                <div className="flex items-center mb-4">
+                  <CheckCircle className="h-5 w-5 text-green-500 mr-2" />
+                  <h2 className="text-xl font-semibold">Analysis Results</h2>
+                </div>
                 
                 <div className="space-y-6">
                   <div>
@@ -166,13 +184,13 @@ const CVAnalysis = () => {
                     <p className="text-sm text-muted-foreground mb-2">
                       Based on your profile, here are some questions you might encounter:
                     </p>
-                    <ul className="space-y-2">
+                    <div className="max-h-[200px] overflow-y-auto pr-2 space-y-2">
                       {analysis.questions.map((question, index) => (
-                        <li key={index} className="text-sm bg-muted p-2 rounded">
+                        <div key={index} className="text-sm bg-muted p-3 rounded-lg border border-border/50">
                           {question}
-                        </li>
+                        </div>
                       ))}
-                    </ul>
+                    </div>
                   </div>
                 </div>
                 
@@ -182,16 +200,15 @@ const CVAnalysis = () => {
                     Ready to practice with these questions? Try our virtual interview!
                   </p>
                   <Button 
-                    variant="outline" 
-                    className="w-full"
-                    onClick={() => window.location.href = '/interview'}
+                    onClick={startInterview}
+                    className="w-full py-6 rounded-xl"
                   >
                     Start Practice Interview
                   </Button>
                 </div>
               </Card>
             ) : (
-              <Card className="p-6 rounded-xl h-full flex items-center justify-center">
+              <Card className="p-6 rounded-xl h-full flex items-center justify-center shadow-lg border-primary/10">
                 <div className="text-center">
                   <div className="mb-4 text-muted-foreground">
                     <svg className="mx-auto h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">

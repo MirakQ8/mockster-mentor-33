@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -9,7 +8,7 @@ import { motion } from 'framer-motion';
 import { toast } from '@/components/ui/use-toast';
 import VirtualInterviewer from '@/components/VirtualInterviewer';
 import SpeechToText from '@/components/SpeechToText';
-import { analyzeFeedback } from '@/lib/gemini';
+import { analyzeFeedback, generateDefaultQuestions } from '@/lib/gemini';
 import { Card } from '@/components/ui/card';
 
 const Interview = () => {
@@ -25,69 +24,71 @@ const Interview = () => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   
   const [questions, setQuestions] = useState<string[]>([]);
   
   useEffect(() => {
-    const savedAnalysis = sessionStorage.getItem('cv-analysis');
-    
-    if (savedAnalysis) {
-      try {
-        const analysis = JSON.parse(savedAnalysis);
-        if (analysis.questions && Array.isArray(analysis.questions) && analysis.questions.length > 0) {
-          console.log("Retrieved questions from CV analysis:", analysis.questions);
-          setQuestions(analysis.questions);
-        } else {
+    const fetchQuestions = async () => {
+      setIsLoading(true);
+      const savedAnalysis = sessionStorage.getItem('cv-analysis');
+      
+      if (savedAnalysis) {
+        try {
+          const analysis = JSON.parse(savedAnalysis);
+          if (analysis.questions && Array.isArray(analysis.questions) && analysis.questions.length > 0) {
+            console.log("Retrieved questions from CV analysis:", analysis.questions);
+            setQuestions(analysis.questions);
+          } else {
+            const jobTitle = analysis.jobTitle || "Software Developer";
+            const generatedQuestions = await generateDefaultQuestions(jobTitle);
+            setQuestions(generatedQuestions);
+            
+            toast({
+              title: "Generated personalized questions",
+              description: `Created questions for ${jobTitle} role based on your CV.`,
+              variant: "default"
+            });
+          }
+        } catch (error) {
+          console.error("Error parsing CV analysis from session storage:", error);
           setDefaultQuestions();
-          toast({
-            title: "No specific questions found",
-            description: "Using default interview questions. For personalized questions, please analyze your CV first.",
-            variant: "default"
-          });
         }
-      } catch (error) {
-        console.error("Error parsing CV analysis from session storage:", error);
-        setDefaultQuestions();
+      } else {
+        await setDefaultQuestions();
+        toast({
+          title: "No CV analysis found",
+          description: "Using default interview questions. For personalized questions, please analyze your CV first.",
+          variant: "default"
+        });
       }
-    } else {
-      setDefaultQuestions();
-      toast({
-        title: "No CV analysis found",
-        description: "Using default interview questions. For personalized questions, please analyze your CV first.",
-        variant: "default"
-      });
-    }
+      setIsLoading(false);
+    };
+    
+    fetchQuestions();
   }, []);
   
-  const setDefaultQuestions = () => {
-    console.log("Using default questions");
-    setQuestions([
-      "Tell me about your background and experience in this field.",
-      "Describe a challenging project you worked on and how you overcame obstacles.",
-      "How do you stay updated with the latest trends and technologies in your industry?",
-      "What are your strengths and weaknesses related to this position?",
-      "Where do you see yourself professionally in 5 years?",
-      "Tell me about a time when you had to learn a new technology quickly.",
-      "How do you handle tight deadlines and pressure?",
-      "Describe your approach to debugging and troubleshooting.",
-      "How do you collaborate with team members who have different working styles?",
-      "What aspects of your work do you find most enjoyable?"
-    ]);
+  const setDefaultQuestions = async () => {
+    console.log("Generating default questions");
+    const generatedQuestions = await generateDefaultQuestions();
+    setQuestions(generatedQuestions);
   };
   
   const currentQuestion = questions[currentQuestionIndex] || "Loading question...";
   const progress = questions.length > 0 ? ((currentQuestionIndex + 1) / questions.length) * 100 : 0;
   
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setIsAsking(false);
-      if (videoEnabled) {
-        setTimeRemaining(120);
-      }
-    }, 2000);
-    
-    return () => clearTimeout(timer);
-  }, [currentQuestionIndex, videoEnabled]);
+    if (!isLoading) {
+      const timer = setTimeout(() => {
+        setIsAsking(false);
+        if (videoEnabled) {
+          setTimeRemaining(120);
+        }
+      }, 2000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [currentQuestionIndex, videoEnabled, isLoading]);
   
   useEffect(() => {
     if (timeRemaining !== null && timeRemaining > 0 && !isAsking) {
@@ -182,7 +183,6 @@ const Interview = () => {
         return updatedAnswers;
       });
       
-      // Stop video recording if enabled when moving to next question
       if (videoEnabled) {
         stopVideoRecording();
         setVideoEnabled(false);
@@ -193,7 +193,6 @@ const Interview = () => {
       setAnswer('');
       setIsAsking(true);
       
-      // Also stop audio recording if it's ongoing
       if (isRecording) {
         setIsRecording(false);
       }
@@ -282,135 +281,141 @@ const Interview = () => {
           </div>
         </div>
         
-        <motion.div
-          key={currentQuestionIndex}
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -20 }}
-          transition={{ duration: 0.5 }}
-          className="space-y-8"
-        >
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="md:col-span-2">
-              <VirtualInterviewer 
-                question={currentQuestion} 
-                isAsking={isAsking} 
-              />
+        {isLoading ? (
+          <div className="flex justify-center items-center h-[400px]">
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+          </div>
+        ) : (
+          <motion.div
+            key={currentQuestionIndex}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            transition={{ duration: 0.5 }}
+            className="space-y-8"
+          >
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="md:col-span-2">
+                <VirtualInterviewer 
+                  question={currentQuestion} 
+                  isAsking={isAsking} 
+                />
+              </div>
+              
+              <div className="flex flex-col space-y-4">
+                {videoEnabled ? (
+                  <Card className="relative overflow-hidden rounded-xl border border-primary/20 shadow-md h-[240px] flex items-center justify-center bg-black">
+                    <video 
+                      ref={videoRef} 
+                      autoPlay 
+                      muted 
+                      className="w-full h-full object-cover"
+                    />
+                    {timeRemaining !== null && (
+                      <div className="absolute top-2 right-2 bg-background/80 text-foreground px-3 py-1 rounded-full text-sm flex items-center shadow-md border border-border">
+                        <Timer className="w-4 h-4 mr-2 text-primary" />
+                        {formatTime(timeRemaining)}
+                      </div>
+                    )}
+                  </Card>
+                ) : (
+                  <Card className="relative overflow-hidden rounded-xl border border-muted shadow-md h-[240px] flex items-center justify-center bg-muted/20">
+                    <div className="text-center p-4">
+                      <Video className="w-12 h-12 mx-auto mb-2 text-muted-foreground/50" />
+                      <p className="text-muted-foreground">Camera is off</p>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={toggleVideo} 
+                        className="mt-4"
+                        disabled={isAsking}
+                      >
+                        Enable camera
+                      </Button>
+                    </div>
+                  </Card>
+                )}
+                
+                <div className="flex flex-col space-y-2">
+                  <Button
+                    type="button"
+                    variant={videoEnabled ? "destructive" : "outline"}
+                    size="sm"
+                    onClick={toggleVideo}
+                    className="w-full"
+                    disabled={isAsking}
+                  >
+                    {videoEnabled ? (
+                      <>
+                        <VideoOff className="mr-2 h-4 w-4" />
+                        Disable Camera
+                      </>
+                    ) : (
+                      <>
+                        <Video className="mr-2 h-4 w-4" />
+                        Enable Camera
+                      </>
+                    )}
+                  </Button>
+                  
+                  <Button
+                    type="button"
+                    variant={isRecording ? "destructive" : "outline"}
+                    size="sm"
+                    onClick={toggleRecording}
+                    className="w-full"
+                    disabled={isAsking}
+                  >
+                    {isRecording ? (
+                      <>
+                        <MicOff className="mr-2 h-4 w-4" />
+                        Stop Recording
+                      </>
+                    ) : (
+                      <>
+                        <Mic className="mr-2 h-4 w-4" />
+                        Record Audio
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </div>
             </div>
             
-            <div className="flex flex-col space-y-4">
-              {videoEnabled ? (
-                <Card className="relative overflow-hidden rounded-xl border border-primary/20 shadow-md h-[240px] flex items-center justify-center bg-black">
-                  <video 
-                    ref={videoRef} 
-                    autoPlay 
-                    muted 
-                    className="w-full h-full object-cover"
-                  />
-                  {timeRemaining !== null && (
-                    <div className="absolute top-2 right-2 bg-background/80 text-foreground px-3 py-1 rounded-full text-sm flex items-center shadow-md border border-border">
-                      <Timer className="w-4 h-4 mr-2 text-primary" />
-                      {formatTime(timeRemaining)}
-                    </div>
-                  )}
-                </Card>
-              ) : (
-                <Card className="relative overflow-hidden rounded-xl border border-muted shadow-md h-[240px] flex items-center justify-center bg-muted/20">
-                  <div className="text-center p-4">
-                    <Video className="w-12 h-12 mx-auto mb-2 text-muted-foreground/50" />
-                    <p className="text-muted-foreground">Camera is off</p>
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      onClick={toggleVideo} 
-                      className="mt-4"
-                      disabled={isAsking}
-                    >
-                      Enable camera
-                    </Button>
-                  </div>
-                </Card>
-              )}
+            <div className="space-y-4">
+              <Textarea
+                placeholder="Type your answer here..."
+                value={answer}
+                onChange={(e) => setAnswer(e.target.value)}
+                disabled={isAsking}
+                className="min-h-[150px] text-base p-4 rounded-xl focus:ring-primary/50"
+              />
               
-              <div className="flex flex-col space-y-2">
+              <div className="flex justify-end">
                 <Button
                   type="button"
-                  variant={videoEnabled ? "destructive" : "outline"}
-                  size="sm"
-                  onClick={toggleVideo}
-                  className="w-full"
-                  disabled={isAsking}
+                  className="px-8 py-6 rounded-xl shadow-lg"
+                  disabled={!answer.trim() || isSubmitting || isAsking}
+                  onClick={handleSubmitAnswer}
                 >
-                  {videoEnabled ? (
+                  {isSubmitting ? "Submitting..." : (
                     <>
-                      <VideoOff className="mr-2 h-4 w-4" />
-                      Disable Camera
-                    </>
-                  ) : (
-                    <>
-                      <Video className="mr-2 h-4 w-4" />
-                      Enable Camera
-                    </>
-                  )}
-                </Button>
-                
-                <Button
-                  type="button"
-                  variant={isRecording ? "destructive" : "outline"}
-                  size="sm"
-                  onClick={toggleRecording}
-                  className="w-full"
-                  disabled={isAsking}
-                >
-                  {isRecording ? (
-                    <>
-                      <MicOff className="mr-2 h-4 w-4" />
-                      Stop Recording
-                    </>
-                  ) : (
-                    <>
-                      <Mic className="mr-2 h-4 w-4" />
-                      Record Audio
+                      {currentQuestionIndex < questions.length - 1 ? (
+                        <>
+                          Next Question <ArrowRight className="ml-2 h-4 w-4" />
+                        </>
+                      ) : (
+                        <>
+                          Finish Interview <Send className="ml-2 h-4 w-4" />
+                        </>
+                      )}
                     </>
                   )}
                 </Button>
               </div>
             </div>
-          </div>
-          
-          <div className="space-y-4">
-            <Textarea
-              placeholder="Type your answer here..."
-              value={answer}
-              onChange={(e) => setAnswer(e.target.value)}
-              disabled={isAsking}
-              className="min-h-[150px] text-base p-4 rounded-xl focus:ring-primary/50"
-            />
-            
-            <div className="flex justify-end">
-              <Button
-                type="button"
-                className="px-8 py-6 rounded-xl shadow-lg"
-                disabled={!answer.trim() || isSubmitting || isAsking}
-                onClick={handleSubmitAnswer}
-              >
-                {isSubmitting ? "Submitting..." : (
-                  <>
-                    {currentQuestionIndex < questions.length - 1 ? (
-                      <>
-                        Next Question <ArrowRight className="ml-2 h-4 w-4" />
-                      </>
-                    ) : (
-                      <>
-                        Finish Interview <Send className="ml-2 h-4 w-4" />
-                      </>
-                    )}
-                  </>
-                )}
-              </Button>
-            </div>
-          </div>
-        </motion.div>
+          </motion.div>
+        )}
         
         {isRecording && (
           <SpeechToText

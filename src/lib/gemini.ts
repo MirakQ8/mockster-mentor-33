@@ -1,12 +1,15 @@
 
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
-// Gemini API key
-const API_KEY = "235718022786";
+// Gemini API key - this should be replaced with a proper API key in production
+const API_KEY = process.env.GEMINI_API_KEY || "235718022786";
 
 // Initialize the Gemini AI
 const genAI = new GoogleGenerativeAI(API_KEY);
 
+/**
+ * Analyzes a CV and extracts key information
+ */
 export const analyzeCV = async (cvText: string, yearsExperience: number): Promise<{
   jobTitle: string;
   skills: string[];
@@ -18,7 +21,7 @@ export const analyzeCV = async (cvText: string, yearsExperience: number): Promis
     const prompt = `
       Analyze this CV text and extract the following information:
       1. The most likely job title based on experience (be very specific, if it's a developer specify what kind)
-      2. A list of 5-10 key skills mentioned
+      2. A list of 5-10 key skills mentioned, ordered by relevance
       3. Generate ${yearsExperience} interview questions specifically tailored for this candidate, considering their years of experience.
       Make at least half of these questions technical and specific to their field.
       
@@ -45,6 +48,7 @@ export const analyzeCV = async (cvText: string, yearsExperience: number): Promis
     throw new Error("Could not parse Gemini API response");
   } catch (error) {
     console.error("Error analyzing CV:", error);
+    // Fallback in case of API errors
     return {
       jobTitle: "Software Developer",
       skills: ["Programming", "Problem-solving", "Communication", "JavaScript", "React", "Node.js"],
@@ -59,6 +63,9 @@ export const analyzeCV = async (cvText: string, yearsExperience: number): Promis
   }
 };
 
+/**
+ * Analyzes interview answers and provides feedback
+ */
 export const analyzeFeedback = async (
   questions: string[], 
   answers: string[]
@@ -102,6 +109,7 @@ export const analyzeFeedback = async (
       }
       
       For technical questions, provide specific feedback on the accuracy and depth of technical knowledge.
+      Focus on constructive criticism and actionable advice.
     `;
     
     const result = await model.generateContent(prompt);
@@ -142,5 +150,53 @@ export const analyzeFeedback = async (
         feedback: "Good response that could be enhanced with more specific examples."
       }))
     };
+  }
+};
+
+/**
+ * Generates a set of default interview questions
+ */
+export const generateDefaultQuestions = async (jobTitle: string = "Software Developer"): Promise<string[]> => {
+  try {
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
+    
+    const prompt = `
+      Generate 10 professional interview questions for a ${jobTitle} position.
+      Include a mix of behavioral and technical questions relevant to this role.
+      Make the questions challenging but fair, suitable for a professional interview.
+      Return the questions as a JSON array of strings.
+    `;
+    
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    const text = response.text();
+    
+    // Extract JSON from the response
+    const jsonMatch = text.match(/```json\s*([\s\S]*?)\s*```/) || 
+                      text.match(/\[[\s\S]*\]/);
+                      
+    if (jsonMatch) {
+      const parsedJson = JSON.parse(jsonMatch[0].replace(/```json|```/g, '').trim());
+      console.log("Generated default questions from Gemini:", parsedJson);
+      return parsedJson;
+    }
+    
+    throw new Error("Could not parse Gemini API response");
+  } catch (error) {
+    console.error("Error generating default questions:", error);
+    
+    // Return default questions as fallback
+    return [
+      "Tell me about your background and experience in this field.",
+      "Describe a challenging project you worked on and how you overcame obstacles.",
+      "How do you stay updated with the latest trends and technologies in your industry?",
+      "What are your strengths and weaknesses related to this position?",
+      "Where do you see yourself professionally in 5 years?",
+      "Tell me about a time when you had to learn a new technology quickly.",
+      "How do you handle tight deadlines and pressure?",
+      "Describe your approach to debugging and troubleshooting.",
+      "How do you collaborate with team members who have different working styles?",
+      "What aspects of your work do you find most enjoyable?"
+    ];
   }
 };
