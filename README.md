@@ -44,4 +44,3 @@ This project is built with .
 - shadcn-ui
 - Tailwind CSS
 
-Karman@2025
