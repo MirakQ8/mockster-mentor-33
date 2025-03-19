@@ -1,10 +1,9 @@
 
 ![Alt text](Screenshot%202025-03-19%20235148.png)
 
+Run Project on Windows @Karman :(
 
-
-Run Project on Windows @Karman
-
+Deployment : https://mockster-eta.vercel.app/
 
 Prerequisites:  
 Git: https://git-scm.com/downloads  
