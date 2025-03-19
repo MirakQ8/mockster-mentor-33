@@ -41,13 +41,16 @@ const CVAnalysis = () => {
       
       console.log("Analyzing CV content...");
       
-      // Call Gemini API to analyze the CV - pass 5 for number of questions
+      // Call Gemini API to analyze the CV - pass 10 for number of questions
       const cvAnalysis = await analyzeCV(fileText, 10);
       
       console.log("Received analysis from Gemini API:", cvAnalysis);
       
       // Set the analysis state with the data from Gemini
       setAnalysis(cvAnalysis);
+      
+      // Store the analysis data in sessionStorage for use in Interview.tsx
+      sessionStorage.setItem('cv-analysis', JSON.stringify(cvAnalysis));
       
       toast({
         title: "CV Analysis Complete",

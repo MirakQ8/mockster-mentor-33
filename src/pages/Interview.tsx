@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -25,29 +24,62 @@ const Interview = () => {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   
-  // In a real app, these would come from the backend based on CV analysis
-  const [questions, setQuestions] = useState([
-    "Tell me about your background and experience in this field.",
-    "Describe a challenging project you worked on and how you overcame obstacles.",
-    "How do you stay updated with the latest trends and technologies in your industry?",
-    "What are your strengths and weaknesses related to this position?",
-    "Where do you see yourself professionally in 5 years?",
-    "Tell me about a time when you had to learn a new technology quickly.",
-    "How do you handle tight deadlines and pressure?",
-    "Describe your approach to debugging and troubleshooting.",
-    "How do you collaborate with team members who have different working styles?",
-    "What aspects of your work do you find most enjoyable?"
-  ]);
-  
-  const currentQuestion = questions[currentQuestionIndex];
-  const progress = ((currentQuestionIndex + 1) / questions.length) * 100;
+  const [questions, setQuestions] = useState<string[]>([]);
   
   useEffect(() => {
-    // Simulate the interviewer "asking" the question
+    const savedAnalysis = sessionStorage.getItem('cv-analysis');
+    
+    if (savedAnalysis) {
+      try {
+        const analysis = JSON.parse(savedAnalysis);
+        if (analysis.questions && Array.isArray(analysis.questions) && analysis.questions.length > 0) {
+          console.log("Retrieved questions from CV analysis:", analysis.questions);
+          setQuestions(analysis.questions);
+        } else {
+          setDefaultQuestions();
+          toast({
+            title: "No specific questions found",
+            description: "Using default interview questions. For personalized questions, please analyze your CV first.",
+            variant: "default"
+          });
+        }
+      } catch (error) {
+        console.error("Error parsing CV analysis from session storage:", error);
+        setDefaultQuestions();
+      }
+    } else {
+      setDefaultQuestions();
+      toast({
+        title: "No CV analysis found",
+        description: "Using default interview questions. For personalized questions, please analyze your CV first.",
+        variant: "default"
+      });
+    }
+  }, []);
+  
+  const setDefaultQuestions = () => {
+    console.log("Using default questions");
+    setQuestions([
+      "Tell me about your background and experience in this field.",
+      "Describe a challenging project you worked on and how you overcame obstacles.",
+      "How do you stay updated with the latest trends and technologies in your industry?",
+      "What are your strengths and weaknesses related to this position?",
+      "Where do you see yourself professionally in 5 years?",
+      "Tell me about a time when you had to learn a new technology quickly.",
+      "How do you handle tight deadlines and pressure?",
+      "Describe your approach to debugging and troubleshooting.",
+      "How do you collaborate with team members who have different working styles?",
+      "What aspects of your work do you find most enjoyable?"
+    ]);
+  };
+  
+  const currentQuestion = questions[currentQuestionIndex] || "Loading question...";
+  const progress = questions.length > 0 ? ((currentQuestionIndex + 1) / questions.length) * 100 : 0;
+  
+  useEffect(() => {
     const timer = setTimeout(() => {
       setIsAsking(false);
       if (videoEnabled) {
-        // Start a 2-minute timer for the answer
         setTimeRemaining(120);
       }
     }, 2000);
@@ -56,7 +88,6 @@ const Interview = () => {
   }, [currentQuestionIndex, videoEnabled]);
   
   useEffect(() => {
-    // Handle countdown timer
     if (timeRemaining !== null && timeRemaining > 0 && !isAsking) {
       const interval = setInterval(() => {
         setTimeRemaining(prev => (prev !== null ? prev - 1 : null));
@@ -73,7 +104,6 @@ const Interview = () => {
   
   const toggleVideo = async () => {
     if (videoEnabled) {
-      // Turn off video
       if (streamRef.current) {
         streamRef.current.getTracks().forEach(track => track.stop());
         streamRef.current = null;
@@ -86,7 +116,6 @@ const Interview = () => {
       }
       setVideoEnabled(false);
     } else {
-      // Turn on video
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ video: true });
         streamRef.current = stream;
@@ -95,7 +124,6 @@ const Interview = () => {
           videoRef.current.srcObject = stream;
         }
         
-        // Set up recording
         const mediaRecorder = new MediaRecorder(stream);
         mediaRecorderRef.current = mediaRecorder;
         
@@ -117,30 +145,34 @@ const Interview = () => {
   };
   
   const handleNextQuestion = () => {
+    if (questions.length === 0) {
+      toast({
+        title: "No questions available",
+        description: "Please wait for questions to load or refresh the page.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
     if (currentQuestionIndex < questions.length - 1) {
-      // Save the current answer
       setAnswers(prev => {
         const updatedAnswers = [...prev];
         updatedAnswers[currentQuestionIndex] = answer;
         return updatedAnswers;
       });
       
-      // Reset timer for next question
       setTimeRemaining(null);
       
-      // Move to next question
       setCurrentQuestionIndex(currentQuestionIndex + 1);
       setAnswer('');
       setIsAsking(true);
     } else {
-      // Final answer
       setAnswers(prev => {
         const updatedAnswers = [...prev];
         updatedAnswers[currentQuestionIndex] = answer;
         return updatedAnswers;
       });
       
-      // Process all answers and generate feedback
       handleGenerateFeedback();
     }
   };
@@ -149,23 +181,20 @@ const Interview = () => {
     setIsSubmitting(true);
     
     try {
-      // In a real app, this would send the answers to the backend
-      // Here we're calling Gemini API directly from the frontend (not recommended in production)
+      const finalAnswers = [...answers];
+      finalAnswers[currentQuestionIndex] = answer;
+      
       toast({
         title: "Analyzing your responses",
         description: "Our AI is evaluating your interview performance...",
       });
       
-      // Simulate API call delay for demo purposes
-      setTimeout(() => {
-        // Navigate to feedback page
-        setIsSubmitting(false);
-        navigate('/feedback');
-      }, 3000);
+      const feedback = await analyzeFeedback(questions, finalAnswers);
       
-      // In a real app, we would use analyzeFeedback here:
-      // const feedback = await analyzeFeedback(questions, [...answers, answer]);
-      // sessionStorage.setItem('interview-feedback', JSON.stringify(feedback));
+      sessionStorage.setItem('interview-feedback', JSON.stringify(feedback));
+      
+      setIsSubmitting(false);
+      navigate('/feedback');
     } catch (error) {
       console.error("Error generating feedback:", error);
       toast({

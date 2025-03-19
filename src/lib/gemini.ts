@@ -1,3 +1,4 @@
+
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
 // Gemini API key
@@ -112,7 +113,9 @@ export const analyzeFeedback = async (
                       text.match(/{[\s\S]*}/);
                       
     if (jsonMatch) {
-      return JSON.parse(jsonMatch[0].replace(/```json|```/g, '').trim());
+      const parsedJson = JSON.parse(jsonMatch[0].replace(/```json|```/g, '').trim());
+      console.log("Parsed feedback from Gemini:", parsedJson);
+      return parsedJson;
     }
     
     throw new Error("Could not parse Gemini API response");
