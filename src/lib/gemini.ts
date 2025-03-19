@@ -1,4 +1,3 @@
-
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
 // Gemini API key
@@ -14,6 +13,7 @@ export const analyzeCV = async (cvText: string, yearsExperience: number): Promis
   jobTitle: string;
   skills: string[];
   questions: string[];
+  improvements: string[];
   yearsExperience: number;
 }> => {
   try {
@@ -25,6 +25,7 @@ export const analyzeCV = async (cvText: string, yearsExperience: number): Promis
       2. A list of 5-10 key skills mentioned, ordered by relevance
       3. Generate ${yearsExperience > 5 ? 10 : 8} interview questions specifically tailored for this candidate, considering their years of experience (${yearsExperience} years).
       Make at least half of these questions technical and specific to their field.
+      4. Provide 5 specific recommendations to improve this CV, focusing on content, structure, and presentation.
       
       For each question, assign a difficulty level (Easy, Medium, or Hard) based on how challenging it would be for someone with ${yearsExperience} years of experience.
       
@@ -32,6 +33,7 @@ export const analyzeCV = async (cvText: string, yearsExperience: number): Promis
       - 'jobTitle': string - the detected job title
       - 'skills': array of strings - key skills from the CV
       - 'questions': array of strings - interview questions (at least 5)
+      - 'improvements': array of strings - specific recommendations to improve the CV (exactly 5)
       
       CV Text:
       ${cvText}
@@ -59,10 +61,16 @@ export const analyzeCV = async (cvText: string, yearsExperience: number): Promis
               (q.text || q.question || JSON.stringify(q)))
           : [];
         
+        // Format improvements
+        const formattedImprovements = Array.isArray(parsedJson.improvements)
+          ? parsedJson.improvements
+          : await generateDefaultImprovements();
+        
         return {
           jobTitle: parsedJson.jobTitle || "Software Developer",
           skills: Array.isArray(parsedJson.skills) ? parsedJson.skills : [],
           questions: formattedQuestions.length > 0 ? formattedQuestions : await generateDefaultQuestions(),
+          improvements: formattedImprovements,
           yearsExperience: yearsExperience
         };
       } catch (jsonError) {
@@ -79,6 +87,7 @@ export const analyzeCV = async (cvText: string, yearsExperience: number): Promis
       jobTitle: "Software Developer",
       skills: await generateSkills(),
       questions: await generateDefaultQuestions(),
+      improvements: await generateDefaultImprovements(),
       yearsExperience: yearsExperience
     };
   }
@@ -448,5 +457,48 @@ const getDefaultQuestions = (): string[] => {
     "Describe your approach to debugging and troubleshooting.",
     "How do you collaborate with team members who have different working styles?",
     "What aspects of your work do you find most enjoyable?"
+  ];
+};
+
+/**
+ * Generate fallback CV improvement recommendations if the main API call fails
+ */
+const generateDefaultImprovements = async (): Promise<string[]> => {
+  try {
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
+    
+    const prompt = `
+      Generate 5 specific recommendations to improve a generic software developer CV.
+      Focus on content, structure, and presentation.
+      Return just a JSON array of strings with no explanation.
+    `;
+    
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    const text = response.text();
+    
+    const jsonMatch = text.match(/```json\s*([\s\S]*?)\s*```/) || 
+                      text.match(/\[[\s\S]*\]/);
+                      
+    if (jsonMatch) {
+      const parsedJson = JSON.parse(jsonMatch[0].replace(/```json|```/g, '').trim());
+      return Array.isArray(parsedJson) ? parsedJson : getDefaultImprovements();
+    }
+    
+    return getDefaultImprovements();
+  } catch (error) {
+    console.error("Error generating improvement recommendations:", error);
+    return getDefaultImprovements();
+  }
+};
+
+// Helper function to provide default improvement recommendations as fallback
+const getDefaultImprovements = (): string[] => {
+  return [
+    "Quantify your achievements with specific metrics and results where possible",
+    "Tailor your CV to match the specific job description you're applying for",
+    "Include a strong professional summary at the top that highlights your expertise",
+    "Organize your experience in reverse chronological order with consistent formatting",
+    "Proofread carefully to eliminate spelling and grammatical errors"
   ];
 };

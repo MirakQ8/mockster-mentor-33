@@ -6,7 +6,7 @@ import { FileUpload } from '@/components';
 import { toast } from '@/components/ui/use-toast';
 import PageTransition from '@/components/PageTransition';
 import { motion } from 'framer-motion';
-import { Loader2, CheckCircle, Award, AlertTriangle, FileText, Sparkles } from 'lucide-react';
+import { Loader2, CheckCircle, Award, AlertTriangle, FileText, Sparkles, Lightbulb } from 'lucide-react';
 import { analyzeCV } from '@/lib/gemini';
 import { useNavigate } from 'react-router-dom';
 import { Slider } from '@/components/ui/slider';
@@ -20,6 +20,7 @@ const CVAnalysis = () => {
     jobTitle: string;
     skills: string[];
     questions: string[];
+    improvements: string[];
     yearsExperience?: number;
   } | null>(null);
   const [yearsExperience, setYearsExperience] = useState<number>(2);
@@ -181,7 +182,7 @@ const CVAnalysis = () => {
             transition={{ delay: 0.3, duration: 0.5 }}
           >
             {analysis ? (
-              <Card className="p-6 rounded-xl h-full shadow-lg border-primary/10">
+              <Card className="p-6 rounded-xl h-full shadow-lg border-primary/10 overflow-y-auto">
                 <div className="flex items-center mb-4">
                   <CheckCircle className="h-5 w-5 text-green-500 mr-2" />
                   <h2 className="text-xl font-semibold">Analysis Results</h2>
@@ -205,6 +206,24 @@ const CVAnalysis = () => {
                         >
                           {skill}
                         </span>
+                      ))}
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <h3 className="font-medium text-lg mb-2 flex items-center">
+                      <Lightbulb className="mr-2 h-4 w-4 text-amber-500" />
+                      CV Improvement Recommendations
+                    </h3>
+                    <p className="text-sm text-muted-foreground mb-2">
+                      Our AI suggests these improvements to enhance your CV:
+                    </p>
+                    <div className="space-y-2">
+                      {analysis.improvements.map((improvement, index) => (
+                        <div key={index} className="flex items-start gap-2 text-sm">
+                          <span className="text-amber-500 mt-0.5">•</span>
+                          <p>{improvement}</p>
+                        </div>
                       ))}
                     </div>
                   </div>
