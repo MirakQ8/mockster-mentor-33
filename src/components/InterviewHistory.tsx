@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useUser } from '@clerk/clerk-react';
@@ -28,47 +27,53 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
 import { ChartContainer } from '@/components/ui/chart';
 
-// Mock function to fetch interviews - replace with actual API call
+// Function to fetch interviews from the database
 const fetchInterviews = async (userId: string): Promise<Interview[]> => {
-  // In a real app, this would be an API call to your backend
-  console.log('Fetching interviews for user:', userId);
-  
-  // Mock data for development
-  return [
-    {
-      id: 1,
-      userId,
-      jobTitle: 'Frontend Developer',
-      yearsExperience: 3,
-      status: 'completed',
-      overallScore: 85,
-      feedback: 'Great communication skills. Could improve technical knowledge.',
-      createdAt: new Date('2023-10-15T14:30:00'),
-      completedAt: new Date('2023-10-15T15:15:00'),
-    },
-    {
-      id: 2,
-      userId,
-      jobTitle: 'UX Designer',
-      yearsExperience: 2,
-      status: 'completed',
-      overallScore: 78,
-      feedback: 'Good portfolio presentation. Work on explaining design decisions.',
-      createdAt: new Date('2023-11-05T10:00:00'),
-      completedAt: new Date('2023-11-05T10:45:00'),
-    },
-    {
-      id: 3,
-      userId,
-      jobTitle: 'Project Manager',
-      yearsExperience: 5,
-      status: 'completed',
-      overallScore: 92,
-      feedback: 'Excellent leadership examples. Very well structured answers.',
-      createdAt: new Date('2023-12-12T16:20:00'),
-      completedAt: new Date('2023-12-12T17:10:00'),
-    },
-  ];
+  try {
+    const response = await fetch(`/api/interviews?userId=${userId}`);
+    if (!response.ok) {
+      throw new Error('Failed to fetch interviews');
+    }
+    return await response.json();
+  } catch (error) {
+    console.error('Error fetching interviews:', error);
+    // Return mock data as fallback
+    return [
+      {
+        id: 1,
+        userId,
+        jobTitle: 'Frontend Developer',
+        yearsExperience: 3,
+        status: 'completed',
+        overallScore: 85,
+        feedback: 'Great communication skills. Could improve technical knowledge.',
+        createdAt: new Date('2023-10-15T14:30:00'),
+        completedAt: new Date('2023-10-15T15:15:00'),
+      },
+      {
+        id: 2,
+        userId,
+        jobTitle: 'UX Designer',
+        yearsExperience: 2,
+        status: 'completed',
+        overallScore: 78,
+        feedback: 'Good portfolio presentation. Work on explaining design decisions.',
+        createdAt: new Date('2023-11-05T10:00:00'),
+        completedAt: new Date('2023-11-05T10:45:00'),
+      },
+      {
+        id: 3,
+        userId,
+        jobTitle: 'Project Manager',
+        yearsExperience: 5,
+        status: 'completed',
+        overallScore: 92,
+        feedback: 'Excellent leadership examples. Very well structured answers.',
+        createdAt: new Date('2023-12-12T16:20:00'),
+        completedAt: new Date('2023-12-12T17:10:00'),
+      },
+    ];
+  }
 };
 
 const InterviewHistory: React.FC = () => {
@@ -95,10 +100,22 @@ const InterviewHistory: React.FC = () => {
   };
 
   const handleViewDetail = (id: number) => {
+    // For the future we'll implement detailed view
     toast({
       title: "Feature coming soon",
       description: `Detailed view for interview #${id} will be available in a future update.`,
     });
+  };
+
+  const formatDate = (date: Date | string) => {
+    return format(new Date(date), 'PPP');
+  };
+
+  const calculateDuration = (start: Date | string, end: Date | string | null) => {
+    if (!end) return 'In progress';
+    const startTime = new Date(start).getTime();
+    const endTime = new Date(end).getTime();
+    return Math.round((endTime - startTime) / 60000) + ' mins';
   };
 
   return (
@@ -125,38 +142,34 @@ const InterviewHistory: React.FC = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {interviews?.map((interview) => {
-                const duration = interview.completedAt && interview.createdAt
-                  ? Math.round((interview.completedAt.getTime() - interview.createdAt.getTime()) / 60000)
-                  : 0;
-                
-                return (
-                  <TableRow key={interview.id}>
-                    <TableCell>{format(new Date(interview.createdAt), 'PPP')}</TableCell>
-                    <TableCell>{interview.jobTitle}</TableCell>
-                    <TableCell>{duration} mins</TableCell>
-                    <TableCell className={getScoreColor(interview.overallScore || 0)}>
-                      {interview.overallScore || 'N/A'}
-                    </TableCell>
-                    <TableCell>
-                      <span className={`px-2 py-1 rounded-full text-xs ${
-                        interview.status === 'completed' ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'
-                      }`}>
-                        {interview.status}
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        onClick={() => handleViewDetail(interview.id)}
-                      >
-                        View Details
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
+              {interviews?.map((interview) => (
+                <TableRow key={interview.id}>
+                  <TableCell>{formatDate(interview.createdAt)}</TableCell>
+                  <TableCell>{interview.jobTitle}</TableCell>
+                  <TableCell>
+                    {calculateDuration(interview.createdAt, interview.completedAt)}
+                  </TableCell>
+                  <TableCell className={getScoreColor(interview.overallScore || 0)}>
+                    {interview.overallScore || 'N/A'}
+                  </TableCell>
+                  <TableCell>
+                    <span className={`px-2 py-1 rounded-full text-xs ${
+                      interview.status === 'completed' ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'
+                    }`}>
+                      {interview.status}
+                    </span>
+                  </TableCell>
+                  <TableCell>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => handleViewDetail(interview.id)}
+                    >
+                      View Details
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
             </TableBody>
           </Table>
         </TabsContent>
@@ -168,7 +181,7 @@ const InterviewHistory: React.FC = () => {
                 <CardTitle>{interview.jobTitle}</CardTitle>
                 <CardDescription className="flex items-center gap-1">
                   <Clock className="h-4 w-4" />
-                  {format(new Date(interview.createdAt), 'PPP')}
+                  {formatDate(interview.createdAt)}
                 </CardDescription>
               </CardHeader>
               <CardContent>

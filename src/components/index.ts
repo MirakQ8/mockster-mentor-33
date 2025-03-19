@@ -5,6 +5,7 @@ import FileUpload from './FileUpload';
 import VirtualInterviewer from './VirtualInterviewer';
 import SpeechToText from './SpeechToText';
 import AuthWrapper from './auth/AuthWrapper';
+import InterviewHistory from './InterviewHistory';
 
 export {
   Navbar,
@@ -12,5 +13,6 @@ export {
   FileUpload,
   VirtualInterviewer,
   SpeechToText,
-  AuthWrapper
+  AuthWrapper,
+  InterviewHistory
 };
