@@ -31,10 +31,7 @@ export const analyzeCV = async (cvText: string, yearsExperience: number): Promis
       Format the response as JSON with the following properties:
       - 'jobTitle': string - the detected job title
       - 'skills': array of strings - key skills from the CV
-      - 'questions': array of objects, each containing:
-          - 'text': string - the question text
-          - 'difficulty': string - "Easy", "Medium", or "Hard"
-          - 'type': string - "Technical" or "Behavioral"
+      - 'questions': array of strings - interview questions (at least 5)
       
       CV Text:
       ${cvText}
@@ -49,38 +46,72 @@ export const analyzeCV = async (cvText: string, yearsExperience: number): Promis
                       text.match(/{[\s\S]*}/);
                       
     if (jsonMatch) {
-      const parsedJson = JSON.parse(jsonMatch[0].replace(/```json|```/g, '').trim());
-      console.log("Parsed CV analysis from Gemini:", parsedJson);
+      const jsonText = jsonMatch[0].replace(/```json|```/g, '').trim();
+      console.log("Raw JSON from Gemini:", jsonText);
       
-      // Format questions to match expected output
-      const formattedQuestions = Array.isArray(parsedJson.questions) 
-        ? parsedJson.questions.map(q => typeof q === 'string' ? q : q.text)
-        : [];
-      
-      return {
-        jobTitle: parsedJson.jobTitle || "Software Developer",
-        skills: Array.isArray(parsedJson.skills) ? parsedJson.skills : [],
-        questions: formattedQuestions,
-        yearsExperience: yearsExperience
-      };
+      try {
+        const parsedJson = JSON.parse(jsonText);
+        console.log("Parsed CV analysis from Gemini:", parsedJson);
+        
+        // Format questions to match expected output
+        const formattedQuestions = Array.isArray(parsedJson.questions) 
+          ? parsedJson.questions.map(q => typeof q === 'string' ? q : 
+              (q.text || q.question || JSON.stringify(q)))
+          : [];
+        
+        return {
+          jobTitle: parsedJson.jobTitle || "Software Developer",
+          skills: Array.isArray(parsedJson.skills) ? parsedJson.skills : [],
+          questions: formattedQuestions.length > 0 ? formattedQuestions : await generateDefaultQuestions(),
+          yearsExperience: yearsExperience
+        };
+      } catch (jsonError) {
+        console.error("JSON parsing error:", jsonError);
+        throw new Error("Could not parse Gemini API JSON response");
+      }
     }
     
     throw new Error("Could not parse Gemini API response");
   } catch (error) {
     console.error("Error analyzing CV:", error);
-    // Fallback in case of API errors
+    // Fallback in case of API errors - generate completely dynamic content
     return {
       jobTitle: "Software Developer",
-      skills: ["Programming", "Problem-solving", "Communication", "JavaScript", "React", "Node.js"],
-      questions: [
-        "Tell me about your background in software development.",
-        "Describe a challenging project you worked on and how you overcame technical obstacles.",
-        "How do you stay updated with the latest programming trends and technologies?",
-        "Can you explain the difference between RESTful and GraphQL APIs?",
-        "What's your approach to debugging a complex application issue?"
-      ],
+      skills: await generateSkills(),
+      questions: await generateDefaultQuestions(),
       yearsExperience: yearsExperience
     };
+  }
+};
+
+/**
+ * Generate fallback skills if the main API call fails
+ */
+const generateSkills = async (): Promise<string[]> => {
+  try {
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
+    
+    const prompt = `
+      Generate 6-8 key skills for a software developer.
+      Return just a JSON array of strings with no explanation.
+    `;
+    
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    const text = response.text();
+    
+    const jsonMatch = text.match(/```json\s*([\s\S]*?)\s*```/) || 
+                      text.match(/\[[\s\S]*\]/);
+                      
+    if (jsonMatch) {
+      const parsedJson = JSON.parse(jsonMatch[0].replace(/```json|```/g, '').trim());
+      return Array.isArray(parsedJson) ? parsedJson : ["Programming", "Problem-solving", "Communication", "JavaScript", "React", "Node.js"];
+    }
+    
+    return ["Programming", "Problem-solving", "Communication", "JavaScript", "React", "Node.js"];
+  } catch (error) {
+    console.error("Error generating skills:", error);
+    return ["Programming", "Problem-solving", "Communication", "JavaScript", "React", "Node.js"];
   }
 };
 
@@ -124,8 +155,8 @@ export const analyzeFeedback = async (
       {
         "overallScore": (number between 0-100 representing overall interview performance),
         "feedback": (general feedback summary in 2-3 sentences),
-        "strengths": [list of 3 main strengths observed in the answers],
-        "areasToImprove": [list of 3 areas for improvement],
+        "strengths": [list of 3-5 main strengths observed in the answers],
+        "areasToImprove": [list of 3-5 areas for improvement],
         "questionFeedback": [
           {
             "question": (the question text),
@@ -155,71 +186,157 @@ export const analyzeFeedback = async (
                       text.match(/{[\s\S]*}/);
                       
     if (jsonMatch) {
-      const parsedJson = JSON.parse(jsonMatch[0].replace(/```json|```/g, '').trim());
-      console.log("Parsed feedback from Gemini:", parsedJson);
+      const jsonText = jsonMatch[0].replace(/```json|```/g, '').trim();
+      console.log("Raw feedback JSON from Gemini:", jsonText);
       
-      // Ensure all expected fields exist
-      const formattedFeedback = {
-        overallScore: parsedJson.overallScore || 70,
-        feedback: parsedJson.feedback || "Overall performance was satisfactory.",
-        strengths: Array.isArray(parsedJson.strengths) ? parsedJson.strengths : ["Communication skills", "Technical knowledge", "Problem-solving ability"],
-        areasToImprove: Array.isArray(parsedJson.areasToImprove) ? parsedJson.areasToImprove : ["Provide more specific examples", "Deepen technical knowledge", "Improve answer structure"],
-        questionFeedback: Array.isArray(parsedJson.questionFeedback) 
-          ? parsedJson.questionFeedback.map((qf: any, index: number) => ({
-              question: qf.question || questions[index] || `Question ${index + 1}`,
-              score: qf.score || Math.floor(65 + Math.random() * 20),
-              feedback: qf.feedback || "Answer shows basic understanding but could be improved with more details.",
-              difficulty: qf.difficulty || ["Easy", "Medium", "Hard"][Math.floor(Math.random() * 3)],
-              keyPoints: Array.isArray(qf.keyPoints) ? qf.keyPoints : ["Demonstrated basic knowledge", "Could provide more examples", "Good communication"]
-            }))
-          : questions.map((q, i) => ({
-              question: q,
-              score: 70 + Math.floor(Math.random() * 20),
-              feedback: "Good answer that could be enhanced with more specific examples.",
-              difficulty: ["Easy", "Medium", "Hard"][Math.floor(Math.random() * 3)],
-              keyPoints: [
-                "Demonstrated understanding of core concepts",
-                "Could improve with more specific technical details",
-                "Good communication of ideas"
-              ]
-            }))
-      };
-      
-      return formattedFeedback;
+      try {
+        const parsedJson = JSON.parse(jsonText);
+        console.log("Parsed feedback from Gemini:", parsedJson);
+        
+        // Ensure all expected fields exist
+        const formattedFeedback = {
+          overallScore: parsedJson.overallScore || 70,
+          feedback: parsedJson.feedback || "Overall performance was satisfactory.",
+          strengths: Array.isArray(parsedJson.strengths) ? parsedJson.strengths : await generateStrengths(),
+          areasToImprove: Array.isArray(parsedJson.areasToImprove) ? parsedJson.areasToImprove : await generateAreasToImprove(),
+          questionFeedback: Array.isArray(parsedJson.questionFeedback) 
+            ? parsedJson.questionFeedback.map((qf: any, index: number) => ({
+                question: qf.question || questions[index] || `Question ${index + 1}`,
+                score: qf.score || Math.floor(65 + Math.random() * 20),
+                feedback: qf.feedback || "Answer shows basic understanding but could be improved with more details.",
+                difficulty: qf.difficulty || ["Easy", "Medium", "Hard"][Math.floor(Math.random() * 3)],
+                keyPoints: Array.isArray(qf.keyPoints) ? qf.keyPoints : await generateKeyPoints()
+              }))
+            : await generateQuestionFeedback(questions)
+        };
+        
+        return formattedFeedback;
+      } catch (jsonError) {
+        console.error("JSON parsing error in feedback:", jsonError);
+        throw new Error("Could not parse feedback JSON response");
+      }
     }
     
-    throw new Error("Could not parse Gemini API response");
+    throw new Error("Could not parse Gemini API response for feedback");
   } catch (error) {
     console.error("Error analyzing feedback:", error);
     
-    // Return mock feedback as fallback
+    // Generate dynamic feedback as fallback
     return {
       overallScore: 75,
-      feedback: "Overall, your responses were clear and professional. You effectively demonstrated your experience and skills, but could provide more specific examples to support your claims.",
-      strengths: [
-        "Clear communication and professional tone",
-        "Good understanding of the technical aspects of the role",
-        "Positive attitude and enthusiasm"
-      ],
-      areasToImprove: [
-        "Include more specific examples from your experience",
-        "Elaborate more on quantifiable achievements",
-        "Structure your responses with a clearer beginning, middle, and end"
-      ],
-      questionFeedback: questions.map((q, i) => ({
-        question: q,
-        score: 65 + Math.floor(Math.random() * 25),
-        feedback: "Good response that could be enhanced with more specific examples.",
-        difficulty: ["Easy", "Medium", "Hard"][Math.floor(Math.random() * 3)],
-        keyPoints: [
-          "Demonstrated understanding of core concepts",
-          "Could improve with more specific technical details",
-          "Good communication of complex ideas"
-        ]
-      }))
+      feedback: await generateOverallFeedback(),
+      strengths: await generateStrengths(),
+      areasToImprove: await generateAreasToImprove(),
+      questionFeedback: await generateQuestionFeedback(questions)
     };
   }
 };
+
+// Helper functions to generate dynamic fallback content
+async function generateOverallFeedback(): Promise<string> {
+  try {
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
+    const result = await model.generateContent("Generate a brief 2-3 sentence interview feedback summary. Be constructive but honest.");
+    const response = await result.response;
+    return response.text().trim();
+  } catch (error) {
+    console.error("Error generating feedback:", error);
+    return "Overall, your responses demonstrated good knowledge and communication skills. Consider providing more specific examples in future interviews to strengthen your answers.";
+  }
+}
+
+async function generateStrengths(): Promise<string[]> {
+  try {
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
+    const prompt = "Generate 3 interview strengths. Return just a JSON array of strings.";
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    const text = response.text();
+    
+    const jsonMatch = text.match(/```json\s*([\s\S]*?)\s*```/) || text.match(/\[[\s\S]*\]/);
+    if (jsonMatch) {
+      const parsedJson = JSON.parse(jsonMatch[0].replace(/```json|```/g, '').trim());
+      return Array.isArray(parsedJson) ? parsedJson : ["Clear communication", "Technical knowledge", "Problem-solving ability"];
+    }
+    
+    return ["Clear communication", "Technical knowledge", "Problem-solving ability"];
+  } catch (error) {
+    console.error("Error generating strengths:", error);
+    return ["Clear communication", "Technical knowledge", "Problem-solving ability"];
+  }
+}
+
+async function generateAreasToImprove(): Promise<string[]> {
+  try {
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
+    const prompt = "Generate 3 areas to improve in interviews. Return just a JSON array of strings.";
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    const text = response.text();
+    
+    const jsonMatch = text.match(/```json\s*([\s\S]*?)\s*```/) || text.match(/\[[\s\S]*\]/);
+    if (jsonMatch) {
+      const parsedJson = JSON.parse(jsonMatch[0].replace(/```json|```/g, '').trim());
+      return Array.isArray(parsedJson) ? parsedJson : ["Provide more specific examples", "Structure answers more clearly", "Elaborate on technical concepts"];
+    }
+    
+    return ["Provide more specific examples", "Structure answers more clearly", "Elaborate on technical concepts"];
+  } catch (error) {
+    console.error("Error generating areas to improve:", error);
+    return ["Provide more specific examples", "Structure answers more clearly", "Elaborate on technical concepts"];
+  }
+}
+
+async function generateKeyPoints(): Promise<string[]> {
+  try {
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
+    const prompt = "Generate 3 key points for an interview question feedback. Return just a JSON array of strings.";
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    const text = response.text();
+    
+    const jsonMatch = text.match(/```json\s*([\s\S]*?)\s*```/) || text.match(/\[[\s\S]*\]/);
+    if (jsonMatch) {
+      const parsedJson = JSON.parse(jsonMatch[0].replace(/```json|```/g, '').trim());
+      return Array.isArray(parsedJson) ? parsedJson : ["Demonstrated good understanding", "Could provide more examples", "Clear explanation of concepts"];
+    }
+    
+    return ["Demonstrated good understanding", "Could provide more examples", "Clear explanation of concepts"];
+  } catch (error) {
+    console.error("Error generating key points:", error);
+    return ["Demonstrated good understanding", "Could provide more examples", "Clear explanation of concepts"];
+  }
+}
+
+async function generateQuestionFeedback(questions: string[]): Promise<Array<{
+  question: string;
+  score: number;
+  feedback: string;
+  difficulty: string;
+  keyPoints: string[];
+}>> {
+  return Promise.all(
+    questions.map(async (q) => ({
+      question: q,
+      score: 70 + Math.floor(Math.random() * 20),
+      feedback: await generateSpecificFeedback(),
+      difficulty: ["Easy", "Medium", "Hard"][Math.floor(Math.random() * 3)],
+      keyPoints: await generateKeyPoints()
+    }))
+  );
+}
+
+async function generateSpecificFeedback(): Promise<string> {
+  try {
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
+    const result = await model.generateContent("Generate a 1-2 sentence specific feedback for an interview answer. Be constructive and specific.");
+    const response = await result.response;
+    return response.text().trim();
+  } catch (error) {
+    console.error("Error generating specific feedback:", error);
+    return "Good answer that could be enhanced with more specific examples from your experience.";
+  }
+}
 
 /**
  * Generates a set of default interview questions
@@ -233,9 +350,7 @@ export const generateDefaultQuestions = async (jobTitle: string = "Software Deve
       Include a mix of behavioral and technical questions relevant to this role.
       Make the questions challenging but fair, suitable for a professional interview.
       
-      For each question, include both the question text and its difficulty level (Easy, Medium, or Hard).
-      
-      Return the response as a JSON array of objects, each with 'text' (the question) and 'difficulty' properties.
+      Return the response as a JSON array of strings, with just the questions.
     `;
     
     const result = await model.generateContent(prompt);
@@ -247,21 +362,52 @@ export const generateDefaultQuestions = async (jobTitle: string = "Software Deve
                       text.match(/\[[\s\S]*\]/);
                       
     if (jsonMatch) {
-      const parsedJson = JSON.parse(jsonMatch[0].replace(/```json|```/g, '').trim());
-      console.log("Generated default questions from Gemini:", parsedJson);
+      const jsonText = jsonMatch[0].replace(/```json|```/g, '').trim();
+      console.log("Raw default questions JSON from Gemini:", jsonText);
       
-      // Extract just the question text from the structured response
-      const questions = Array.isArray(parsedJson) 
-        ? parsedJson.map(q => typeof q === 'string' ? q : q.text || q.question)
-        : [];
+      try {
+        const parsedJson = JSON.parse(jsonText);
+        console.log("Generated default questions from Gemini:", parsedJson);
         
-      return questions.length > 0 ? questions : getDefaultQuestions();
+        // Extract just the question text from the structured response
+        const questions = Array.isArray(parsedJson) 
+          ? parsedJson.map(q => typeof q === 'string' ? q : (q.text || q.question || JSON.stringify(q)))
+          : [];
+          
+        if (questions.length > 0) {
+          return questions;
+        }
+        
+        throw new Error("No questions generated");
+      } catch (jsonError) {
+        console.error("JSON parsing error in questions:", jsonError);
+        throw new Error("Could not parse questions JSON response");
+      }
     }
     
-    throw new Error("Could not parse Gemini API response");
+    throw new Error("Could not parse Gemini API response for questions");
   } catch (error) {
     console.error("Error generating default questions:", error);
-    return getDefaultQuestions();
+    
+    // Attempt a second, simpler prompt as fallback
+    try {
+      const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
+      const result = await model.generateContent(`Generate 5 interview questions for a ${jobTitle}.`);
+      const response = await result.response;
+      const text = response.text();
+      
+      // Try to extract a list of questions
+      const questionsList = text.split(/\d+\.\s+/).filter(q => q.trim().length > 0);
+      
+      if (questionsList.length > 0) {
+        return questionsList.map(q => q.trim());
+      }
+      
+      return getDefaultQuestions();
+    } catch (secondError) {
+      console.error("Error in fallback question generation:", secondError);
+      return getDefaultQuestions();
+    }
   }
 };
 
