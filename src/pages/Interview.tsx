@@ -23,7 +23,6 @@ const Interview = () => {
   const [videoEnabled, setVideoEnabled] = useState(false);
   const [timeRemaining, setTimeRemaining] = useState<number | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   
@@ -108,42 +107,48 @@ const Interview = () => {
   
   const toggleVideo = async () => {
     if (videoEnabled) {
-      stopVideoRecording();
+      stopVideoStream();
       setVideoEnabled(false);
     } else {
       try {
-        // Request both video and audio permissions for a complete interview experience
+        // Request camera and microphone permissions
         const stream = await navigator.mediaDevices.getUserMedia({ 
-          video: {
-            width: { ideal: 1280 },
-            height: { ideal: 720 },
-            facingMode: "user"
-          },
-          audio: true
+          video: true,
+          audio: true 
         });
         
         if (stream) {
+          // Store the stream reference for later cleanup
           streamRef.current = stream;
           
-          // Ensure we have a valid video element reference
+          // Set the video element's srcObject to display the stream
           if (videoRef.current) {
             videoRef.current.srcObject = stream;
-            videoRef.current.muted = true; // Mute to prevent feedback
+            // Make sure to mute the video to prevent audio feedback
+            videoRef.current.muted = true;
             
-            // Make sure to play the video once it's loaded
+            // Add event listeners for debug purposes
             videoRef.current.onloadedmetadata = () => {
-              if (videoRef.current) {
-                videoRef.current.play()
-                  .catch(e => {
-                    console.error("Error playing video:", e);
-                    toast({
-                      title: "Camera error",
-                      description: "Unable to display camera feed. Please try again.",
-                      variant: "destructive"
-                    });
-                  });
-              }
+              console.log("Video metadata loaded");
             };
+            
+            videoRef.current.onplay = () => {
+              console.log("Video playback started");
+            };
+            
+            videoRef.current.onerror = (e) => {
+              console.error("Video error:", e);
+            };
+            
+            // Explicitly try to play the video
+            videoRef.current.play().catch(e => {
+              console.error("Error playing video:", e);
+              toast({
+                title: "Camera error",
+                description: "Unable to display camera feed. Please try again.",
+                variant: "destructive"
+              });
+            });
           }
           
           setVideoEnabled(true);
@@ -164,7 +169,8 @@ const Interview = () => {
     }
   };
   
-  const stopVideoRecording = () => {
+  const stopVideoStream = () => {
+    // Stop all tracks in the stream
     if (streamRef.current) {
       streamRef.current.getTracks().forEach(track => {
         track.stop();
@@ -172,11 +178,7 @@ const Interview = () => {
       streamRef.current = null;
     }
     
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
-      mediaRecorderRef.current.stop();
-      mediaRecorderRef.current = null;
-    }
-    
+    // Clear the video source
     if (videoRef.current) {
       videoRef.current.srcObject = null;
     }
@@ -187,7 +189,7 @@ const Interview = () => {
   // Clean up resources when component unmounts
   useEffect(() => {
     return () => {
-      stopVideoRecording();
+      stopVideoStream();
     };
   }, []);
   
@@ -209,7 +211,7 @@ const Interview = () => {
       });
       
       if (videoEnabled) {
-        stopVideoRecording();
+        stopVideoStream();
         setVideoEnabled(false);
       }
       
