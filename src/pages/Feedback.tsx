@@ -117,13 +117,14 @@ const Feedback = () => {
       });
       
       const blob = new Blob([reportContent], { type: 'text/plain' });
-      const url = window.URL.createObjectURL(blob);
+      const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
+      const date = new Date().toISOString().split('T')[0];
       a.href = url;
-      a.download = 'interview-feedback-report.txt';
+      a.download = `interview-feedback-${date}.txt`;
       document.body.appendChild(a);
       a.click();
-      window.URL.revokeObjectURL(url);
+      URL.revokeObjectURL(url);
       document.body.removeChild(a);
       
       toast({

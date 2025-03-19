@@ -1,8 +1,8 @@
 
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
-// Gemini API key - this should be replaced with a proper API key in production
-const API_KEY = process.env.GEMINI_API_KEY || "235718022786";
+// Gemini API key
+const API_KEY = "AIzaSyCBCPhyzKBfLxQi_84wSYMK8fDdDEbbDSg";
 
 // Initialize the Gemini AI
 const genAI = new GoogleGenerativeAI(API_KEY);
@@ -23,7 +23,7 @@ export const analyzeCV = async (cvText: string, yearsExperience: number): Promis
       Analyze this CV text and extract the following information:
       1. The most likely job title based on experience (be very specific, if it's a developer specify what kind)
       2. A list of 5-10 key skills mentioned, ordered by relevance
-      3. Generate ${yearsExperience} interview questions specifically tailored for this candidate, considering their years of experience (${yearsExperience} years).
+      3. Generate ${yearsExperience > 5 ? 10 : 8} interview questions specifically tailored for this candidate, considering their years of experience (${yearsExperience} years).
       Make at least half of these questions technical and specific to their field.
       
       For each question, assign a difficulty level (Easy, Medium, or Hard) based on how challenging it would be for someone with ${yearsExperience} years of experience.
@@ -193,17 +193,20 @@ export const analyzeFeedback = async (
         const parsedJson = JSON.parse(jsonText);
         console.log("Parsed feedback from Gemini:", parsedJson);
         
-        // Ensure all expected fields exist
-        let formattedQuestionFeedback;
+        // Process question feedback with proper async handling
+        let formattedQuestionFeedback: Array<{
+          question: string;
+          score: number;
+          feedback: string;
+          difficulty: string;
+          keyPoints: string[];
+        }> = [];
         
-        // Process question feedback - we need to handle async mapping properly
         if (Array.isArray(parsedJson.questionFeedback)) {
-          // Process each question feedback item individually
           formattedQuestionFeedback = await Promise.all(
             parsedJson.questionFeedback.map(async (qf: any, index: number) => {
-              let keyPointsArray;
+              let keyPointsArray: string[];
               
-              // Handle the keyPoints property with proper async handling
               if (Array.isArray(qf.keyPoints)) {
                 keyPointsArray = qf.keyPoints;
               } else {
