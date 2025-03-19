@@ -17,9 +17,10 @@ export const analyzeCV = async (cvText: string, yearsExperience: number): Promis
     
     const prompt = `
       Analyze this CV text and extract the following information:
-      1. The most likely job title based on experience
+      1. The most likely job title based on experience (be very specific, if it's a developer specify what kind)
       2. A list of 5-10 key skills mentioned
       3. Generate 10 interview questions specifically tailored for this candidate, considering their ${yearsExperience} years of experience.
+      Make at least half of these questions technical and specific to their field.
       
       Format the response as JSON with 'jobTitle', 'skills' (array), and 'questions' (array) properties.
       
@@ -44,18 +45,18 @@ export const analyzeCV = async (cvText: string, yearsExperience: number): Promis
     console.error("Error analyzing CV:", error);
     return {
       jobTitle: "Software Developer",
-      skills: ["Programming", "Problem-solving", "Communication"],
+      skills: ["Programming", "Problem-solving", "Communication", "JavaScript", "React", "Node.js"],
       questions: [
-        "Tell me about your background and experience in this field.",
-        "Describe a challenging project you worked on and how you overcame obstacles.",
-        "How do you stay updated with the latest trends and technologies in your industry?",
-        "What are your strengths and weaknesses related to this position?",
-        "Where do you see yourself professionally in 5 years?",
-        "Tell me about a time when you had to learn a new technology quickly.",
-        "How do you handle tight deadlines and pressure?",
-        "Describe your approach to debugging and troubleshooting.",
-        "How do you collaborate with team members who have different working styles?",
-        "What aspects of your work do you find most enjoyable?"
+        "Tell me about your background in software development.",
+        "Describe a challenging project you worked on and how you overcame technical obstacles.",
+        "How do you stay updated with the latest programming trends and technologies?",
+        "Can you explain the difference between RESTful and GraphQL APIs?",
+        "What's your approach to debugging a complex application issue?",
+        "Walk me through your process for optimizing application performance.",
+        "How do you handle code reviews and feedback from team members?",
+        "Explain how you would implement authentication in a web application.",
+        "What testing methodologies do you use in your development process?",
+        "How would you architect a scalable microservices system?"
       ]
     };
   }
@@ -83,7 +84,7 @@ export const analyzeFeedback = async (
     ).join("\n\n");
     
     const prompt = `
-      You are an expert interview coach. Analyze these interview answers and provide feedback.
+      You are an expert interview coach specializing in technical interviews. Analyze these interview answers and provide detailed feedback.
       
       ${questionsAnswersPairs}
       
@@ -97,11 +98,13 @@ export const analyzeFeedback = async (
           {
             "question": (the question text),
             "score": (number between 0-100),
-            "feedback": (specific feedback for this answer)
+            "feedback": (specific technical feedback for this answer)
           },
           ...for each question
         ]
       }
+      
+      For technical questions, provide specific feedback on the accuracy and depth of technical knowledge.
     `;
     
     const result = await model.generateContent(prompt);

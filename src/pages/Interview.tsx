@@ -1,9 +1,9 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Send, ArrowRight } from 'lucide-react';
+import { Send, ArrowRight, Video, VideoOff, Timer } from 'lucide-react';
 import PageTransition from '@/components/PageTransition';
 import { motion } from 'framer-motion';
 import { toast } from '@/components/ui/use-toast';
@@ -19,6 +19,11 @@ const Interview = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isAsking, setIsAsking] = useState(true);
   const [answers, setAnswers] = useState<string[]>([]);
+  const [videoEnabled, setVideoEnabled] = useState(false);
+  const [timeRemaining, setTimeRemaining] = useState<number | null>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
   
   // In a real app, these would come from the backend based on CV analysis
   const [questions, setQuestions] = useState([
@@ -41,10 +46,75 @@ const Interview = () => {
     // Simulate the interviewer "asking" the question
     const timer = setTimeout(() => {
       setIsAsking(false);
+      if (videoEnabled) {
+        // Start a 2-minute timer for the answer
+        setTimeRemaining(120);
+      }
     }, 2000);
     
     return () => clearTimeout(timer);
-  }, [currentQuestionIndex]);
+  }, [currentQuestionIndex, videoEnabled]);
+  
+  useEffect(() => {
+    // Handle countdown timer
+    if (timeRemaining !== null && timeRemaining > 0 && !isAsking) {
+      const interval = setInterval(() => {
+        setTimeRemaining(prev => (prev !== null ? prev - 1 : null));
+      }, 1000);
+      
+      return () => clearInterval(interval);
+    } else if (timeRemaining === 0) {
+      toast({
+        title: "Time's up!",
+        description: "Please submit your answer now."
+      });
+    }
+  }, [timeRemaining, isAsking]);
+  
+  const toggleVideo = async () => {
+    if (videoEnabled) {
+      // Turn off video
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop());
+        streamRef.current = null;
+      }
+      if (mediaRecorderRef.current) {
+        if (mediaRecorderRef.current.state === "recording") {
+          mediaRecorderRef.current.stop();
+        }
+        mediaRecorderRef.current = null;
+      }
+      setVideoEnabled(false);
+    } else {
+      // Turn on video
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        streamRef.current = stream;
+        
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+        }
+        
+        // Set up recording
+        const mediaRecorder = new MediaRecorder(stream);
+        mediaRecorderRef.current = mediaRecorder;
+        
+        setVideoEnabled(true);
+        
+        toast({
+          title: "Video enabled",
+          description: "You'll have 2 minutes to answer each question."
+        });
+      } catch (error) {
+        console.error("Error accessing camera:", error);
+        toast({
+          title: "Camera access denied",
+          description: "Please allow camera access to use this feature.",
+          variant: "destructive"
+        });
+      }
+    }
+  };
   
   const handleNextQuestion = () => {
     if (currentQuestionIndex < questions.length - 1) {
@@ -54,6 +124,9 @@ const Interview = () => {
         updatedAnswers[currentQuestionIndex] = answer;
         return updatedAnswers;
       });
+      
+      // Reset timer for next question
+      setTimeRemaining(null);
       
       // Move to next question
       setCurrentQuestionIndex(currentQuestionIndex + 1);
@@ -116,6 +189,12 @@ const Interview = () => {
   const handleTranscript = (text: string) => {
     setAnswer(text);
   };
+  
+  const formatTime = (seconds: number): string => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
 
   return (
     <PageTransition>
@@ -148,10 +227,31 @@ const Interview = () => {
           transition={{ duration: 0.5 }}
           className="space-y-8"
         >
-          <VirtualInterviewer 
-            question={currentQuestion} 
-            isAsking={isAsking} 
-          />
+          <div className="flex items-start gap-4">
+            <div className="flex-1">
+              <VirtualInterviewer 
+                question={currentQuestion} 
+                isAsking={isAsking} 
+              />
+            </div>
+            
+            {videoEnabled && (
+              <div className="w-1/3 relative">
+                <video 
+                  ref={videoRef} 
+                  autoPlay 
+                  muted 
+                  className="w-full h-auto rounded-xl border border-border"
+                />
+                {timeRemaining !== null && (
+                  <div className="absolute top-2 right-2 bg-background/80 text-foreground px-2 py-1 rounded-full text-sm flex items-center">
+                    <Timer className="w-3 h-3 mr-1" />
+                    {formatTime(timeRemaining)}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
           
           <div className="space-y-4">
             <Textarea
@@ -162,7 +262,26 @@ const Interview = () => {
               className="min-h-[150px] text-base p-4 rounded-xl"
             />
             
-            <div className="flex space-x-3">
+            <div className="flex flex-wrap gap-3">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={toggleVideo}
+                className="flex items-center"
+              >
+                {videoEnabled ? (
+                  <>
+                    <VideoOff className="mr-2 h-4 w-4" />
+                    Disable Video
+                  </>
+                ) : (
+                  <>
+                    <Video className="mr-2 h-4 w-4" />
+                    Enable Video
+                  </>
+                )}
+              </Button>
+              
               <SpeechToText
                 onTranscript={handleTranscript}
                 isRecording={isRecording}

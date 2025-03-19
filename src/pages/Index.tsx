@@ -2,7 +2,8 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, CheckCircle, Award, BarChart3 } from 'lucide-react';
+import { Card } from '@/components/ui/card';
+import { ArrowRight, CheckCircle, Award, BarChart3, HelpCircle, Info, User } from 'lucide-react';
 import PageTransition from '@/components/PageTransition';
 import { motion } from 'framer-motion';
 
@@ -39,6 +40,25 @@ const Index = () => {
     hidden: { opacity: 0, y: 20 },
     show: { opacity: 1, y: 0 }
   };
+
+  const faqItems = [
+    {
+      question: "How does the interview practice work?",
+      answer: "Our AI generates personalized interview questions based on your CV and job position. You can practice answering in a realistic interview setting, with video recording options and time limits."
+    },
+    {
+      question: "How accurate is the CV analysis?",
+      answer: "Our system uses advanced AI to analyze your CV and extract relevant information. While highly accurate, we recommend reviewing the analysis to ensure it aligns with your experience and skills."
+    },
+    {
+      question: "Can I practice for technical interviews?",
+      answer: "Yes! Our system generates technical questions specific to your field and role, allowing you to practice answering technical questions that you might encounter in a real interview."
+    },
+    {
+      question: "How can I improve my interview skills?",
+      answer: "Practice regularly with our mock interviews, review the detailed feedback we provide, and implement the suggested improvements in your responses and CV."
+    }
+  ];
 
   return (
     <PageTransition>
@@ -79,20 +99,6 @@ const Index = () => {
           </motion.div>
         </div>
 
-        <motion.div 
-          className="mb-24 relative"
-          initial={{ opacity: 0, y: 40 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.4, duration: 0.6 }}
-        >
-          <div className="aspect-video rounded-2xl overflow-hidden shadow-xl border">
-            <div className="bg-secondary/50 w-full h-full flex items-center justify-center">
-              <p className="text-muted-foreground">Interview Interface Preview</p>
-            </div>
-          </div>
-          <div className="absolute -bottom-16 left-1/2 -translate-x-1/2 w-[80%] h-16 bg-gradient-to-t from-background to-transparent" />
-        </motion.div>
-
         <motion.div
           variants={container}
           initial="hidden"
@@ -115,6 +121,59 @@ const Index = () => {
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
+          transition={{ delay: 0.4, duration: 0.6 }}
+          className="mb-24"
+        >
+          <h2 className="text-3xl font-bold text-center mb-12">How It Works</h2>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+            {[
+              { step: "1", title: "Upload CV", description: "Upload your resume for AI analysis" },
+              { step: "2", title: "Analyze", description: "Get insights and personalized questions" },
+              { step: "3", title: "Practice", description: "Complete a simulated interview" },
+              { step: "4", title: "Improve", description: "Review feedback and enhance your skills" }
+            ].map((step, index) => (
+              <motion.div
+                key={index}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.4 + (index * 0.1), duration: 0.6 }}
+                className="flex flex-col items-center text-center"
+              >
+                <div className="w-16 h-16 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xl font-bold mb-4">
+                  {step.step}
+                </div>
+                <h3 className="text-xl font-semibold mb-2">{step.title}</h3>
+                <p className="text-muted-foreground">{step.description}</p>
+              </motion.div>
+            ))}
+          </div>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.6, duration: 0.8 }}
+          className="mb-24"
+        >
+          <h2 className="text-3xl font-bold text-center mb-8">Frequently Asked Questions</h2>
+          <div className="max-w-3xl mx-auto">
+            <div className="space-y-4">
+              {faqItems.map((faq, index) => (
+                <Card key={index} className="p-6 rounded-xl">
+                  <h3 className="text-lg font-semibold mb-2 flex items-center">
+                    <HelpCircle className="mr-2 h-5 w-5 text-primary" />
+                    {faq.question}
+                  </h3>
+                  <p className="text-muted-foreground">{faq.answer}</p>
+                </Card>
+              ))}
+            </div>
+          </div>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
           transition={{ delay: 0.8, duration: 0.8 }}
           className="text-center mb-16"
         >
@@ -123,6 +182,40 @@ const Index = () => {
             <Link to="/upload">Upload Your CV</Link>
           </Button>
         </motion.div>
+
+        <footer className="border-t pt-8 pb-16">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex flex-col md:flex-row justify-between items-center">
+              <div className="mb-6 md:mb-0">
+                <div className="font-semibold text-lg mb-2">
+                  <span className="text-primary">Mock</span>ster
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  AI-powered interview preparation tool
+                </p>
+              </div>
+              
+              <div className="flex space-x-8 mb-6 md:mb-0">
+                <Link to="/" className="text-sm flex items-center text-muted-foreground hover:text-foreground">
+                  <Info className="mr-1 h-4 w-4" />
+                  About
+                </Link>
+                <Link to="/" className="text-sm flex items-center text-muted-foreground hover:text-foreground">
+                  <HelpCircle className="mr-1 h-4 w-4" />
+                  FAQ
+                </Link>
+                <Link to="/" className="text-sm flex items-center text-muted-foreground hover:text-foreground">
+                  <User className="mr-1 h-4 w-4" />
+                  Account
+                </Link>
+              </div>
+            </div>
+            
+            <div className="text-center text-sm text-muted-foreground mt-8">
+              © 2025 Karman. All rights reserved.
+            </div>
+          </div>
+        </footer>
       </div>
     </PageTransition>
   );
