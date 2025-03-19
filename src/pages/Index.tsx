@@ -1,10 +1,12 @@
+
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { ArrowRight, CheckCircle, Award, BarChart3, HelpCircle } from 'lucide-react';
+import { ArrowRight, CheckCircle, Award, BarChart3, HelpCircle, Activity, FileText } from 'lucide-react';
 import PageTransition from '@/components/PageTransition';
 import { motion } from 'framer-motion';
+import GradientBackground from '@/components/GradientBackground';
 
 const Index = () => {
   const features = [
@@ -61,143 +63,149 @@ const Index = () => {
 
   return (
     <PageTransition>
-      <div className="min-h-screen pt-24 px-4 md:px-6 max-w-7xl mx-auto">
-        <div className="flex flex-col items-center text-center mb-20">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.5 }}
-            className="mb-6"
-          >
-            <span className="inline-block px-3 py-1 text-xs font-medium bg-primary/10 text-primary rounded-full mb-4">
-              AI-Powered Interview Preparation
-            </span>
-            <h1 className="text-4xl md:text-6xl font-bold tracking-tight mb-4">
-              Ace Your Next <span className="text-primary">Interview</span>
-            </h1>
-            <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto">
-              Practice with our AI interviewer, get personalized feedback, and improve your skills with every session.
-            </p>
-          </motion.div>
-          
-          <motion.div 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2, duration: 0.5 }}
-            className="flex flex-col sm:flex-row gap-4 mt-8"
-          >
-            <Button asChild size="lg" className="rounded-full px-8">
-              <Link to="/upload">
-                Get Started
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Link>
-            </Button>
-          </motion.div>
-        </div>
-
-        <motion.div
-          variants={container}
-          initial="hidden"
-          animate="show"
-          className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-24"
-        >
-          {features.map((feature, index) => (
+      <GradientBackground className="min-h-screen pt-24 px-4 md:px-6">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex flex-col items-center text-center mb-20">
             <motion.div
-              key={index}
-              variants={item}
-              className="relative p-8 rounded-2xl border bg-card"
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.5 }}
+              className="mb-6"
             >
-              <div className="mb-4">{feature.icon}</div>
-              <h3 className="text-xl font-semibold mb-2">{feature.title}</h3>
-              <p className="text-muted-foreground">{feature.description}</p>
+              <span className="inline-block px-3 py-1 text-xs font-medium bg-primary/10 text-primary rounded-full mb-4">
+                AI-Powered Interview Preparation
+              </span>
+              <h1 className="text-4xl md:text-6xl font-bold tracking-tight mb-4">
+                Ace Your Next <span className="bg-gradient-to-r from-primary to-blue-600 text-transparent bg-clip-text">Interview</span>
+              </h1>
+              <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto">
+                Practice with our AI interviewer, get personalized feedback, and improve your skills with every session.
+              </p>
             </motion.div>
-          ))}
-        </motion.div>
+            
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2, duration: 0.5 }}
+              className="flex flex-col sm:flex-row gap-4 mt-8"
+            >
+              <Button asChild size="lg" className="rounded-full px-8 bg-gradient-to-r from-primary to-blue-600 hover:from-primary/90 hover:to-blue-700 transition-all">
+                <Link to="/upload">
+                  Get Started
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Link>
+              </Button>
+            </motion.div>
+          </div>
 
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.4, duration: 0.6 }}
-          className="mb-24"
-        >
-          <h2 className="text-3xl font-bold text-center mb-12">How It Works</h2>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-            {[
-              { step: "1", title: "Upload CV", description: "Upload your resume for AI analysis" },
-              { step: "2", title: "Analyze", description: "Get insights and personalized questions" },
-              { step: "3", title: "Practice", description: "Complete a simulated interview" },
-              { step: "4", title: "Improve", description: "Review feedback and enhance your skills" }
-            ].map((step, index) => (
+          <motion.div
+            variants={container}
+            initial="hidden"
+            animate="show"
+            className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-24"
+          >
+            {features.map((feature, index) => (
               <motion.div
                 key={index}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.4 + (index * 0.1), duration: 0.6 }}
-                className="flex flex-col items-center text-center"
+                variants={item}
+                className="relative p-8 rounded-2xl border bg-card hover:shadow-lg transition-all hover:border-primary/20"
               >
-                <div className="w-16 h-16 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xl font-bold mb-4">
-                  {step.step}
-                </div>
-                <h3 className="text-xl font-semibold mb-2">{step.title}</h3>
-                <p className="text-muted-foreground">{step.description}</p>
+                <div className="mb-4">{feature.icon}</div>
+                <h3 className="text-xl font-semibold mb-2">{feature.title}</h3>
+                <p className="text-muted-foreground">{feature.description}</p>
               </motion.div>
             ))}
-          </div>
-        </motion.div>
+          </motion.div>
 
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.6, duration: 0.8 }}
-          className="mb-24"
-        >
-          <h2 className="text-3xl font-bold text-center mb-8">Frequently Asked Questions</h2>
-          <div className="max-w-3xl mx-auto">
-            <div className="space-y-4">
-              {faqItems.map((faq, index) => (
-                <Card key={index} className="p-6 rounded-xl">
-                  <h3 className="text-lg font-semibold mb-2 flex items-center">
-                    <HelpCircle className="mr-2 h-5 w-5 text-primary" />
-                    {faq.question}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.4, duration: 0.6 }}
+            className="mb-24"
+          >
+            <h2 className="text-3xl font-bold text-center mb-12 bg-gradient-to-r from-primary to-blue-600 text-transparent bg-clip-text">How It Works</h2>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+              {[
+                { step: "1", title: "Upload CV", description: "Upload your resume for AI analysis", icon: <FileText className="h-4 w-4 text-primary" /> },
+                { step: "2", title: "Analyze", description: "Get insights and personalized questions", icon: <Activity className="h-4 w-4 text-primary" /> },
+                { step: "3", title: "Practice", description: "Complete a simulated interview", icon: <CheckCircle className="h-4 w-4 text-primary" /> },
+                { step: "4", title: "Improve", description: "Review feedback and enhance your skills", icon: <Award className="h-4 w-4 text-primary" /> }
+              ].map((step, index) => (
+                <motion.div
+                  key={index}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.4 + (index * 0.1), duration: 0.6 }}
+                  className="flex flex-col items-center text-center"
+                >
+                  <div className="w-16 h-16 rounded-full bg-gradient-to-br from-primary/20 to-blue-500/20 text-primary flex items-center justify-center text-xl font-bold mb-4">
+                    {step.step}
+                  </div>
+                  <h3 className="text-xl font-semibold mb-2 flex items-center gap-2">
+                    {step.icon}
+                    {step.title}
                   </h3>
-                  <p className="text-muted-foreground">{faq.answer}</p>
-                </Card>
+                  <p className="text-muted-foreground">{step.description}</p>
+                </motion.div>
               ))}
             </div>
-          </div>
-        </motion.div>
+          </motion.div>
 
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.8, duration: 0.8 }}
-          className="text-center mb-16"
-        >
-          <h2 className="text-3xl font-bold mb-6">Ready to improve your interview skills?</h2>
-          <Button asChild size="lg" className="rounded-full px-8">
-            <Link to="/upload">Upload Your CV</Link>
-          </Button>
-        </motion.div>
-
-        <footer className="border-t pt-8 pb-16">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex flex-col md:flex-row justify-between items-center">
-              <div className="mb-6 md:mb-0">
-                <div className="font-semibold text-lg mb-2">
-                  <span className="text-primary">Mock</span>ster
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  AI-powered interview preparation tool
-                </p>
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.6, duration: 0.8 }}
+            className="mb-24"
+          >
+            <h2 className="text-3xl font-bold text-center mb-8 bg-gradient-to-r from-primary to-blue-600 text-transparent bg-clip-text">Frequently Asked Questions</h2>
+            <div className="max-w-3xl mx-auto">
+              <div className="space-y-4">
+                {faqItems.map((faq, index) => (
+                  <Card key={index} className="p-6 rounded-xl hover:shadow-md transition-all hover:border-primary/20">
+                    <h3 className="text-lg font-semibold mb-2 flex items-center">
+                      <HelpCircle className="mr-2 h-5 w-5 text-primary" />
+                      {faq.question}
+                    </h3>
+                    <p className="text-muted-foreground">{faq.answer}</p>
+                  </Card>
+                ))}
               </div>
             </div>
-            
-            <div className="text-center text-sm text-muted-foreground mt-8">
-              © 2025 Karman. All rights reserved.
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.8, duration: 0.8 }}
+            className="text-center mb-16"
+          >
+            <h2 className="text-3xl font-bold mb-6">Ready to improve your interview skills?</h2>
+            <Button asChild size="lg" className="rounded-full px-8 bg-gradient-to-r from-primary to-blue-600 hover:from-primary/90 hover:to-blue-700 transition-all">
+              <Link to="/upload">Upload Your CV</Link>
+            </Button>
+          </motion.div>
+
+          <footer className="border-t pt-8 pb-16">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+              <div className="flex flex-col md:flex-row justify-between items-center">
+                <div className="mb-6 md:mb-0">
+                  <div className="font-semibold text-lg mb-2">
+                    <span className="bg-gradient-to-r from-primary to-blue-600 text-transparent bg-clip-text font-bold">Mock</span>
+                    <span className="font-extrabold">ster</span>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    AI-powered interview preparation tool
+                  </p>
+                </div>
+              </div>
+              
+              <div className="text-center text-sm text-muted-foreground mt-8">
+                © 2025 Mockster. All rights reserved.
+              </div>
             </div>
-          </div>
-        </footer>
-      </div>
+          </footer>
+        </div>
+      </GradientBackground>
     </PageTransition>
   );
 };

@@ -30,15 +30,18 @@ const Navbar: React.FC = () => {
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50">
-      <div 
+      <motion.div 
+        initial={{ y: -20, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ duration: 0.5 }}
         className="mx-auto my-4 max-w-5xl px-4 sm:px-6 lg:px-8"
         style={{
-          background: "linear-gradient(90deg, rgba(238,174,202,0.3) 0%, rgba(148,187,233,0.3) 100%)",
+          background: "rgba(255, 255, 255, 0.7)",
           backdropFilter: "blur(10px)",
           WebkitBackdropFilter: "blur(10px)",
           borderRadius: "1rem",
-          boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)",
-          border: "1px solid rgba(255, 255, 255, 0.18)"
+          boxShadow: "0 4px 20px -1px rgba(0, 0, 0, 0.05), 0 2px 10px -1px rgba(0, 0, 0, 0.02)",
+          border: "1px solid rgba(255, 255, 255, 0.8)"
         }}
       >
         <div className="flex h-16 items-center justify-between">
@@ -46,7 +49,7 @@ const Navbar: React.FC = () => {
             to="/" 
             className="flex items-center gap-2"
           >
-            <div className="bg-gradient-to-r from-primary to-blue-500 text-transparent bg-clip-text">
+            <div className="bg-gradient-to-r from-primary to-blue-600 text-transparent bg-clip-text">
               <span className="font-bold text-2xl">Mock</span>
               <span className="font-extrabold text-2xl">ster</span>
             </div>
@@ -89,7 +92,7 @@ const Navbar: React.FC = () => {
                     {isActive && (
                       <motion.div
                         layoutId="navbar-indicator"
-                        className="absolute inset-0 bg-gradient-to-r from-primary to-blue-500 rounded-full -z-10"
+                        className="absolute inset-0 bg-gradient-to-r from-primary to-blue-600 rounded-full -z-10"
                         transition={{ type: "spring", duration: 0.5 }}
                       />
                     )}
@@ -117,7 +120,7 @@ const Navbar: React.FC = () => {
             </div>
           )}
         </div>
-      </div>
+      </motion.div>
     </header>
   );
 };
