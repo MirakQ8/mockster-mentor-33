@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Send, ArrowRight, Video, VideoOff, Timer, Mic, MicOff } from 'lucide-react';
+import { Send, ArrowRight, Video, VideoOff, Timer, Mic, MicOff, Camera } from 'lucide-react';
 import PageTransition from '@/components/PageTransition';
 import { motion } from 'framer-motion';
 import { toast } from '@/components/ui/use-toast';
@@ -11,9 +11,12 @@ import VirtualInterviewer from '@/components/VirtualInterviewer';
 import SpeechToText from '@/components/SpeechToText';
 import { analyzeFeedback, generateDefaultQuestions } from '@/lib/gemini';
 import { Card } from '@/components/ui/card';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 const Interview = () => {
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answer, setAnswer] = useState('');
   const [isRecording, setIsRecording] = useState(false);
@@ -25,6 +28,7 @@ const Interview = () => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [cameraError, setCameraError] = useState<string | null>(null);
   
   const [questions, setQuestions] = useState<string[]>([]);
   
@@ -66,6 +70,14 @@ const Interview = () => {
     };
     
     fetchQuestions();
+    
+    // Try to automatically open the camera when the component loads
+    enableCameraWithPermission();
+    
+    // Cleanup on unmount
+    return () => {
+      stopVideoStream();
+    };
   }, []);
   
   const setDefaultQuestions = async () => {
@@ -105,67 +117,65 @@ const Interview = () => {
     }
   }, [timeRemaining, isAsking]);
   
+  const enableCameraWithPermission = async () => {
+    try {
+      // Request camera and microphone permissions with appropriate constraints
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
+          facingMode: "user"
+        },
+        audio: false // We don't need audio for the video feed
+      });
+      
+      if (stream) {
+        // Store the stream reference for later cleanup
+        streamRef.current = stream;
+        
+        // Set the video element's srcObject to display the stream
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+          videoRef.current.muted = true; // Mute to prevent feedback
+          
+          console.log("Setting up video stream...");
+          
+          // Explicitly try to play the video
+          try {
+            await videoRef.current.play();
+            console.log("Video is playing");
+            setVideoEnabled(true);
+            setCameraError(null);
+            
+            toast({
+              title: "Camera activated",
+              description: "Your camera is now ready for the interview."
+            });
+          } catch (error) {
+            console.error("Error playing video:", error);
+            setCameraError("Unable to play video stream. Please try again.");
+            stopVideoStream();
+          }
+        }
+      }
+    } catch (error: any) {
+      console.error("Camera access error:", error);
+      setCameraError(error.message || "Camera access denied. Please check your browser permissions.");
+      
+      toast({
+        title: "Camera access denied",
+        description: "Please allow camera access in your browser settings to use this feature.",
+        variant: "destructive"
+      });
+    }
+  };
+  
   const toggleVideo = async () => {
     if (videoEnabled) {
       stopVideoStream();
       setVideoEnabled(false);
     } else {
-      try {
-        // Request camera and microphone permissions
-        const stream = await navigator.mediaDevices.getUserMedia({ 
-          video: true,
-          audio: true 
-        });
-        
-        if (stream) {
-          // Store the stream reference for later cleanup
-          streamRef.current = stream;
-          
-          // Set the video element's srcObject to display the stream
-          if (videoRef.current) {
-            videoRef.current.srcObject = stream;
-            // Make sure to mute the video to prevent audio feedback
-            videoRef.current.muted = true;
-            
-            // Add event listeners for debug purposes
-            videoRef.current.onloadedmetadata = () => {
-              console.log("Video metadata loaded");
-            };
-            
-            videoRef.current.onplay = () => {
-              console.log("Video playback started");
-            };
-            
-            videoRef.current.onerror = (e) => {
-              console.error("Video error:", e);
-            };
-            
-            // Explicitly try to play the video
-            videoRef.current.play().catch(e => {
-              console.error("Error playing video:", e);
-              toast({
-                title: "Camera error",
-                description: "Unable to display camera feed. Please try again.",
-                variant: "destructive"
-              });
-            });
-          }
-          
-          setVideoEnabled(true);
-          
-          toast({
-            title: "Camera activated",
-            description: "You'll have 2 minutes to answer each question."
-          });
-        }
-      } catch (error) {
-        console.error("Error accessing camera:", error);
-        toast({
-          title: "Camera access denied",
-          description: "Please allow camera access to use this feature.",
-          variant: "destructive"
-        });
-      }
+      enableCameraWithPermission();
     }
   };
   
@@ -184,14 +194,8 @@ const Interview = () => {
     }
     
     setTimeRemaining(null);
+    setCameraError(null);
   };
-  
-  // Clean up resources when component unmounts
-  useEffect(() => {
-    return () => {
-      stopVideoStream();
-    };
-  }, []);
   
   const handleNextQuestion = () => {
     if (questions.length === 0) {
@@ -223,6 +227,11 @@ const Interview = () => {
       if (isRecording) {
         setIsRecording(false);
       }
+      
+      // Auto-enable camera for the next question
+      setTimeout(() => {
+        enableCameraWithPermission();
+      }, 2500);
     } else {
       setAnswers(prev => {
         const updatedAnswers = [...prev];
@@ -294,7 +303,7 @@ const Interview = () => {
           >
             <h1 className="text-3xl font-bold mb-2">Mock Interview</h1>
             <p className="text-muted-foreground">
-              Question {currentQuestionIndex + 1} of {questions.length}
+              Question {currentQuestionIndex +.1} of {questions.length}
             </p>
           </motion.div>
           
@@ -349,13 +358,20 @@ const Interview = () => {
                 ) : (
                   <Card className="relative overflow-hidden rounded-xl border border-muted shadow-md h-[240px] flex items-center justify-center bg-muted/20">
                     <div className="text-center p-4">
-                      <Video className="w-12 h-12 mx-auto mb-2 text-muted-foreground/50" />
-                      <p className="text-muted-foreground">Camera is off</p>
+                      <Camera className="w-12 h-12 mx-auto mb-2 text-muted-foreground/50" />
+                      <p className="text-muted-foreground mb-2">Camera is off</p>
+                      
+                      {cameraError ? (
+                        <Alert variant="destructive" className="mb-2 text-sm">
+                          <AlertDescription>{cameraError}</AlertDescription>
+                        </Alert>
+                      ) : null}
+                      
                       <Button 
                         variant="outline" 
                         size="sm" 
                         onClick={toggleVideo} 
-                        className="mt-4"
+                        className="mt-2"
                         disabled={isAsking}
                       >
                         Enable camera
