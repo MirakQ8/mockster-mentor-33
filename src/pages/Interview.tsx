@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -11,9 +10,12 @@ import VirtualInterviewer from '@/components/VirtualInterviewer';
 import SpeechToText from '@/components/SpeechToText';
 import { analyzeFeedback, generateDefaultQuestions } from '@/lib/gemini';
 import { Card } from '@/components/ui/card';
+import { db } from '@/lib/db';
+import { useUser } from '@clerk/clerk-react';
 
 const Interview = () => {
   const navigate = useNavigate();
+  const { user } = useUser();
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answer, setAnswer] = useState('');
   const [isRecording, setIsRecording] = useState(false);
@@ -26,6 +28,7 @@ const Interview = () => {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [interviewId, setInterviewId] = useState<number | null>(null);
   
   const [questions, setQuestions] = useState<string[]>([]);
   
@@ -77,6 +80,60 @@ const Interview = () => {
   
   const currentQuestion = questions[currentQuestionIndex] || "Loading question...";
   const progress = questions.length > 0 ? ((currentQuestionIndex + 1) / questions.length) * 100 : 0;
+  
+  // Create a new interview record when the component loads
+  useEffect(() => {
+    const createNewInterview = async () => {
+      if (user && questions.length > 0 && !interviewId) {
+        try {
+          const savedAnalysis = sessionStorage.getItem('cv-analysis');
+          let jobTitle = "Software Developer"; // Default
+          let yearsExperience = 1; // Default
+          
+          if (savedAnalysis) {
+            try {
+              const analysis = JSON.parse(savedAnalysis);
+              jobTitle = analysis.jobTitle || jobTitle;
+              yearsExperience = analysis.yearsExperience || yearsExperience;
+            } catch (e) {
+              console.error("Error parsing CV analysis:", e);
+            }
+          }
+          
+          // In a real implementation, this would be an API call to the backend
+          // For demo purposes, we'll create a mock interview record and store its ID
+          const mockInterviewId = Date.now(); // Using timestamp as a mock ID
+          setInterviewId(mockInterviewId);
+          
+          // Save the initial interview data to sessionStorage
+          const interviewData = {
+            id: mockInterviewId,
+            userId: user.id,
+            jobTitle,
+            yearsExperience,
+            status: 'pending',
+            questions: questions,
+            createdAt: new Date().toISOString()
+          };
+          
+          sessionStorage.setItem('current-interview', JSON.stringify(interviewData));
+          
+          console.log("Created new interview:", interviewData);
+        } catch (error) {
+          console.error("Error creating interview:", error);
+          toast({
+            title: "Error",
+            description: "Failed to create interview. Please try again.",
+            variant: "destructive"
+          });
+        }
+      }
+    };
+    
+    if (!isLoading) {
+      createNewInterview();
+    }
+  }, [user, questions, isLoading, interviewId]);
   
   useEffect(() => {
     if (!isLoading) {
@@ -201,19 +258,42 @@ const Interview = () => {
       return;
     }
     
-    if (currentQuestionIndex < questions.length - 1) {
-      setAnswers(prev => {
-        const updatedAnswers = [...prev];
-        updatedAnswers[currentQuestionIndex] = answer;
-        return updatedAnswers;
-      });
-      
-      if (videoEnabled) {
-        stopVideoRecording();
-        setVideoEnabled(false);
+    // Save the current answer
+    setAnswers(prev => {
+      const updatedAnswers = [...prev];
+      updatedAnswers[currentQuestionIndex] = answer;
+      return updatedAnswers;
+    });
+    
+    // Update the interview data in sessionStorage
+    if (interviewId) {
+      try {
+        const storedData = sessionStorage.getItem('current-interview');
+        if (storedData) {
+          const interviewData = JSON.parse(storedData);
+          const updatedAnswers = [...(interviewData.answers || [])];
+          updatedAnswers[currentQuestionIndex] = answer;
+          
+          const updatedData = {
+            ...interviewData,
+            answers: updatedAnswers
+          };
+          
+          sessionStorage.setItem('current-interview', JSON.stringify(updatedData));
+        }
+      } catch (error) {
+        console.error("Error updating interview data:", error);
       }
-      
-      setTimeRemaining(null);
+    }
+    
+    if (videoEnabled) {
+      stopVideoRecording();
+      setVideoEnabled(false);
+    }
+    
+    setTimeRemaining(null);
+    
+    if (currentQuestionIndex < questions.length - 1) {
       setCurrentQuestionIndex(currentQuestionIndex + 1);
       setAnswer('');
       setIsAsking(true);
@@ -222,12 +302,6 @@ const Interview = () => {
         setIsRecording(false);
       }
     } else {
-      setAnswers(prev => {
-        const updatedAnswers = [...prev];
-        updatedAnswers[currentQuestionIndex] = answer;
-        return updatedAnswers;
-      });
-      
       handleGenerateFeedback();
     }
   };
@@ -246,7 +320,36 @@ const Interview = () => {
       
       const feedback = await analyzeFeedback(questions, finalAnswers);
       
-      sessionStorage.setItem('interview-feedback', JSON.stringify(feedback));
+      // Update the interview in sessionStorage as completed
+      if (interviewId) {
+        const storedData = sessionStorage.getItem('current-interview');
+        if (storedData) {
+          const interviewData = JSON.parse(storedData);
+          
+          const completedInterview = {
+            ...interviewData,
+            status: 'completed',
+            answers: finalAnswers,
+            feedback: feedback.overallFeedback,
+            overallScore: feedback.overallScore,
+            questionFeedback: feedback.questionFeedback,
+            completedAt: new Date().toISOString()
+          };
+          
+          // Save the completed interview
+          sessionStorage.setItem('interview-feedback', JSON.stringify(feedback));
+          sessionStorage.setItem('completed-interview', JSON.stringify(completedInterview));
+          
+          // In a real implementation, this would be an API call to the backend
+          console.log("Completed interview:", completedInterview);
+          
+          // Add to interview history in sessionStorage
+          const historyString = sessionStorage.getItem('interview-history');
+          const history = historyString ? JSON.parse(historyString) : [];
+          history.push(completedInterview);
+          sessionStorage.setItem('interview-history', JSON.stringify(history));
+        }
+      }
       
       setIsSubmitting(false);
       navigate('/feedback');

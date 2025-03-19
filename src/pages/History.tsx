@@ -1,6 +1,5 @@
 
 import React from 'react';
-import { useQuery } from '@tanstack/react-query';
 import { useUser } from '@clerk/clerk-react';
 import { format } from 'date-fns';
 import { 
@@ -32,67 +31,89 @@ import {
 } from '@/components/ui/pagination';
 import { Badge } from '@/components/ui/badge';
 import { Clock, FileText, MessageSquare } from 'lucide-react';
-import { db } from '@/lib/db';
 import PageTransition from '@/components/PageTransition';
+import { useQuery } from '@tanstack/react-query';
 
 interface Interview {
-  id: string;
+  id: number;
   userId: string;
+  jobTitle: string;
+  yearsExperience: number;
+  status: 'pending' | 'completed';
+  questions: string[];
+  answers?: string[];
+  feedback?: string;
+  overallScore?: number;
   createdAt: string;
-  updatedAt: string;
-  score: number;
-  duration: number;
-  status: 'completed' | 'in-progress' | 'cancelled';
-  position: string;
+  completedAt?: string;
 }
 
 const fetchInterviews = async (userId: string): Promise<Interview[]> => {
   try {
-    // Here we would normally use a server-side API endpoint
-    // Since we can't create that in this context, we'll simulate fetching from the database
-    // In a real implementation, this would be an API call to a backend endpoint
+    // In a production environment, this would be a fetch to an API endpoint
+    // Since we're using client-side storage for this demo, we'll fetch from sessionStorage
     
-    console.log('Fetching interviews for user:', userId);
+    const historyString = sessionStorage.getItem('interview-history');
+    let interviews = historyString ? JSON.parse(historyString) : [];
     
-    // This is a placeholder for actual database interaction
-    // In a real app, this would be handled by a server-side API
-    return [
-      {
-        id: '1',
-        userId,
-        createdAt: new Date(Date.now() - 86400000 * 2).toISOString(), // 2 days ago
-        updatedAt: new Date(Date.now() - 86400000 * 2).toISOString(),
-        score: 85,
-        duration: 1800, // 30 minutes in seconds
-        status: 'completed',
-        position: 'Frontend Developer'
-      },
-      {
-        id: '2',
-        userId,
-        createdAt: new Date(Date.now() - 86400000 * 5).toISOString(), // 5 days ago
-        updatedAt: new Date(Date.now() - 86400000 * 5).toISOString(),
-        score: 72,
-        duration: 1500, // 25 minutes in seconds
-        status: 'completed',
-        position: 'Backend Engineer'
-      },
-      {
-        id: '3',
-        userId,
-        createdAt: new Date(Date.now() - 86400000 * 10).toISOString(), // 10 days ago
-        updatedAt: new Date(Date.now() - 86400000 * 10).toISOString(),
-        score: 90,
-        duration: 2100, // 35 minutes in seconds
-        status: 'completed',
-        position: 'Full Stack Developer'
-      }
-    ];
+    // Filter for the current user
+    interviews = interviews.filter((interview: Interview) => interview.userId === userId);
     
+    console.log('Fetched interviews from storage:', interviews);
+    
+    if (interviews.length === 0) {
+      // If no interviews are found, return some sample data
+      return [
+        {
+          id: 1,
+          userId,
+          jobTitle: 'Frontend Developer',
+          yearsExperience: 2,
+          status: 'completed',
+          questions: ['Tell me about yourself', 'What are your strengths?'],
+          overallScore: 85,
+          createdAt: new Date(Date.now() - 86400000 * 2).toISOString(), // 2 days ago
+          completedAt: new Date(Date.now() - 86400000 * 2).toISOString(),
+        },
+        {
+          id: 2,
+          userId,
+          jobTitle: 'Backend Engineer',
+          yearsExperience: 3,
+          status: 'completed',
+          questions: ['Tell me about a challenging project', 'How do you handle pressure?'],
+          overallScore: 72,
+          createdAt: new Date(Date.now() - 86400000 * 5).toISOString(), // 5 days ago
+          completedAt: new Date(Date.now() - 86400000 * 5).toISOString(),
+        },
+        {
+          id: 3,
+          userId,
+          jobTitle: 'Full Stack Developer',
+          yearsExperience: 4,
+          status: 'completed',
+          questions: ['Describe your workflow', 'How do you stay updated with technologies?'],
+          overallScore: 90,
+          createdAt: new Date(Date.now() - 86400000 * 10).toISOString(), // 10 days ago
+          completedAt: new Date(Date.now() - 86400000 * 10).toISOString(),
+        }
+      ];
+    }
+    
+    return interviews;
   } catch (error) {
     console.error('Error fetching interviews:', error);
     return [];
   }
+};
+
+// Helper function to calculate interview duration based on creation and completion times
+const calculateDuration = (createdAt: string, completedAt?: string): number => {
+  if (!completedAt) return 1800; // Default 30 mins
+  
+  const start = new Date(createdAt).getTime();
+  const end = new Date(completedAt).getTime();
+  return Math.floor((end - start) / 1000);
 };
 
 const formatDuration = (seconds: number): string => {
@@ -187,11 +208,13 @@ const History: React.FC = () => {
                 <TableBody>
                   {interviews.map((interview) => (
                     <TableRow key={interview.id}>
-                      <TableCell className="font-medium">{interview.position}</TableCell>
+                      <TableCell className="font-medium">{interview.jobTitle}</TableCell>
                       <TableCell>{format(new Date(interview.createdAt), 'MMM dd, yyyy')}</TableCell>
-                      <TableCell>{formatDuration(interview.duration)}</TableCell>
-                      <TableCell className={getScoreColor(interview.score)}>
-                        {interview.score}%
+                      <TableCell>
+                        {formatDuration(calculateDuration(interview.createdAt, interview.completedAt))}
+                      </TableCell>
+                      <TableCell className={getScoreColor(interview.overallScore || 0)}>
+                        {interview.overallScore || 0}%
                       </TableCell>
                       <TableCell>
                         <Badge variant={interview.status === 'completed' ? 'default' : 'outline'}>
@@ -231,7 +254,7 @@ const History: React.FC = () => {
               {interviews.map((interview) => (
                 <Card key={interview.id}>
                   <CardHeader>
-                    <CardTitle>{interview.position}</CardTitle>
+                    <CardTitle>{interview.jobTitle}</CardTitle>
                     <CardDescription>
                       {format(new Date(interview.createdAt), 'MMMM dd, yyyy')}
                     </CardDescription>
@@ -239,12 +262,14 @@ const History: React.FC = () => {
                   <CardContent className="space-y-2">
                     <div className="flex items-center gap-2">
                       <Clock className="h-4 w-4 text-muted-foreground" />
-                      <span>{formatDuration(interview.duration)}</span>
+                      <span>
+                        {formatDuration(calculateDuration(interview.createdAt, interview.completedAt))}
+                      </span>
                     </div>
                     <div className="flex items-center gap-2">
                       <FileText className="h-4 w-4 text-muted-foreground" />
-                      <span className={getScoreColor(interview.score)}>
-                        Score: <strong>{interview.score}%</strong>
+                      <span className={getScoreColor(interview.overallScore || 0)}>
+                        Score: <strong>{interview.overallScore || 0}%</strong>
                       </span>
                     </div>
                     <div className="flex items-center gap-2">
