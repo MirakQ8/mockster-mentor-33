@@ -3,7 +3,7 @@
 
 Run Project on Windows @Karman :(
 
-Deployment : https://mockster-eta.vercel.app/
+Deployment : [https://mockster-eta.vercel.app/](https://mockster-mentor-33.vercel.app/)
 
 Prerequisites:  
 Git: https://git-scm.com/downloads  
